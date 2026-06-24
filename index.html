@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AnimeVS ⚔️</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d0d14;color:#fff;font-family:'Inter',sans-serif;min-height:100vh;}
+.tf{font-family:'Bangers',cursive;letter-spacing:2px;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(120,40,200,.12),transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(200,40,40,.12),transparent 60%);pointer-events:none;z-index:0;}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:99px;background:rgba(255,255,255,.1);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.4);cursor:pointer;}
+.stat-track{background:rgba(255,255,255,.08);border-radius:99px;height:7px;overflow:hidden;}
+.stat-fill{height:100%;border-radius:99px;transition:width .4s cubic-bezier(.4,0,.2,1);}
+.vs-btn{background:linear-gradient(135deg,#ff4444,#ff8800,#ffcc00);border:none;border-radius:16px;color:#000;font-family:'Bangers',cursive;font-size:26px;letter-spacing:3px;cursor:pointer;transition:all .2s;overflow:hidden;}
+.vs-btn:hover{transform:scale(1.04);box-shadow:0 0 30px rgba(255,140,0,.5);}
+.vs-btn:active{transform:scale(.97);}
+.vs-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes zoomIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes vsFlash{0%{opacity:0;transform:scale(3) rotate(-10deg)}40%{opacity:1;transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}
+@keyframes glow{0%,100%{text-shadow:0 0 20px currentColor}50%{text-shadow:0 0 60px currentColor,0 0 100px currentColor}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(110px) rotate(720deg);opacity:0}}
+@keyframes battle{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px) rotate(-2deg)}75%{transform:translateX(10px) rotate(2deg)}}
+@keyframes barGrow{from{width:0}to{width:var(--w)}}
+/* Battle animation */
+@keyframes enterLeft{from{transform:translateX(-140%)}to{transform:translateX(0)}}
+@keyframes enterRight{from{transform:translateX(140%)}to{transform:translateX(0)}}
+@keyframes chargeLeft{0%{transform:translateX(0) scale(1)}100%{transform:translateX(40%) scale(1.15)}}
+@keyframes chargeRight{0%{transform:translateX(0) scale(1)}100%{transform:translateX(-40%) scale(1.15)}}
+@keyframes clashFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes shockwave{0%{transform:translate(-50%,-50%) scale(0);opacity:1}100%{transform:translate(-50%,-50%) scale(4);opacity:0}}
+@keyframes shockwave2{0%{transform:translate(-50%,-50%) scale(0);opacity:.7}100%{transform:translate(-50%,-50%) scale(6);opacity:0}}
+@keyframes sparkFly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}}
+@keyframes vsAppear{0%{opacity:0;transform:translate(-50%,-50%) scale(4)}40%{opacity:1;transform:translate(-50%,-50%) scale(0.9)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes screenShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-8px,4px)}40%{transform:translate(8px,-4px)}60%{transform:translate(-6px,6px)}80%{transform:translate(6px,-2px)}}
+@keyframes groundLine{from{width:0;opacity:1}to{width:200%;opacity:0}}
+/* Race mode enhanced animations */
+@keyframes pieceHop{0%,100%{transform:translate(-50%,-50%) scale(1)}30%{transform:translate(-50%,-80%) scale(1.3) rotate(-8deg)}65%{transform:translate(-50%,-35%) scale(.88) rotate(5deg)}82%{transform:translate(-50%,-56%) scale(1.06)}}
+@keyframes pieceScore{0%{transform:translate(-50%,-50%) scale(1)}20%{transform:translate(-50%,-110%) scale(1.5) rotate(-15deg)}45%{transform:translate(-50%,-160%) scale(1.6) rotate(15deg)}65%{transform:translate(-50%,-90%) scale(1.2)}85%{transform:translate(-50%,-120%) scale(1.35)}100%{transform:translate(-50%,-50%) scale(1)}}
+@keyframes floatPoints{0%{opacity:1;transform:translate(-50%,0) scale(1.4)}100%{opacity:0;transform:translate(-50%,-60px) scale(.8)}}
+@keyframes cellFlash{0%,100%{filter:brightness(1)}40%{filter:brightness(2.5)}}
+@keyframes diceShake{0%,100%{transform:rotate(0) scale(1)}20%{transform:rotate(-20deg) scale(1.2)}50%{transform:rotate(20deg) scale(1.15)}80%{transform:rotate(-10deg) scale(1.1)}}
+@keyframes dice3dRoll{0%{transform:perspective(120px) rotateX(0) rotateY(0) scale(1.05)}20%{transform:perspective(120px) rotateX(180deg) rotateY(90deg) scale(1.18)}45%{transform:perspective(120px) rotateX(360deg) rotateY(270deg) scale(1.12)}70%{transform:perspective(120px) rotateX(540deg) rotateY(180deg) scale(1.2)}100%{transform:perspective(120px) rotateX(720deg) rotateY(360deg) scale(1.05)}}
+@keyframes diceAppear{0%{transform:perspective(120px) rotateX(90deg) scale(.5);opacity:0}60%{transform:perspective(120px) rotateX(-15deg) scale(1.1);opacity:1}80%{transform:perspective(120px) rotateX(8deg) scale(.97)}100%{transform:perspective(120px) rotateX(0) scale(1);opacity:1}}
+@keyframes hudGlow{0%,100%{box-shadow:0 0 12px var(--hc,#fff3)}50%{box-shadow:0 0 28px var(--hc,#fff6),0 0 50px var(--hc,#fff2)}}
+@keyframes scorePopBig{0%{transform:scale(1)}30%{transform:scale(1.5)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+@keyframes diceRollCube{0%{transform:rotateX(0) rotateY(0) rotateZ(0)}25%{transform:rotateX(180deg) rotateY(90deg) rotateZ(45deg)}50%{transform:rotateX(360deg) rotateY(270deg) rotateZ(90deg)}75%{transform:rotateX(540deg) rotateY(180deg) rotateZ(135deg)}100%{transform:rotateX(720deg) rotateY(360deg) rotateZ(180deg)}}
+@keyframes diceSettle{0%{transform:rotateX(-30deg) rotateY(25deg) scale(1.2)}60%{transform:rotateX(5deg) rotateY(-5deg) scale(.95)}100%{transform:rotateX(0) rotateY(0) scale(1)}}
+@keyframes mangaFlash{0%,100%{opacity:0}40%,60%{opacity:1}}
+@keyframes speedLine{0%{opacity:.8;transform:translateX(-120%) skewX(-20deg)}100%{opacity:0;transform:translateX(120%) skewX(-20deg)}}
+@keyframes neonPulse{0%,100%{opacity:.7}50%{opacity:1;filter:brightness(1.3)}}
+@keyframes boardShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes charPulse{0%,100%{filter:brightness(1) drop-shadow(0 0 0px transparent)}50%{filter:brightness(1.3) drop-shadow(0 0 16px currentColor)}}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.fu{animation:fadeUp .4s ease both;}
+.zi{animation:zoomIn .5s cubic-bezier(.175,.885,.32,1.275) both;}
+.vf{animation:vsFlash .6s cubic-bezier(.175,.885,.32,1.275) both;}
+.wg{animation:glow 2s ease infinite,pulse 2s ease infinite;}
+.bsh{animation:battle .5s ease;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100;display:flex;align-items:center;justify-content:center;}
+.chip{padding:5px 14px;border-radius:99px;font-size:12px;font-weight:700;border:none;cursor:pointer;transition:all .2s;}
+.chip:hover{transform:scale(1.05);}
+.confetti-p{position:absolute;width:8px;height:8px;border-radius:2px;pointer-events:none;}
+
+@keyframes ballFly{0%{opacity:0;transform:translate(-50%,200%) scale(.5)}55%{opacity:1;transform:translate(-50%,-10%) scale(1.15)}80%{transform:translate(-50%,5%) scale(.95)}100%{opacity:0;transform:translate(-50%,15%) scale(.85)}}
+@keyframes netSwish{0%,100%{transform:scaleY(1)}45%{transform:scaleY(1.5) scaleX(.75)}}
+@keyframes hoopFlash{0%,100%{filter:brightness(1)}40%{filter:brightness(2.2)}}
+@keyframes scoreLabel{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.8)}}
+@keyframes ballPip{0%{transform:scale(0) rotate(-180deg);opacity:0}60%{transform:scale(1.3) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
+@keyframes charCelebrate{0%{transform:translate(-50%,0) scale(1)}20%{transform:translate(-50%,-55px) scale(1.35) rotate(-12deg)}45%{transform:translate(-50%,-80px) scale(1.45) rotate(8deg)}65%{transform:translate(-50%,-45px) scale(1.2) rotate(-4deg)}82%{transform:translate(-50%,-65px) scale(1.3)}100%{transform:translate(-50%,-10px) scale(1.1)}}
+@keyframes reactionText{0%{opacity:0;transform:translate(-50%,-50%) scale(0) rotate(-15deg)}25%{opacity:1;transform:translate(-50%,-50%) scale(1.4) rotate(4deg)}55%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}80%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:0;transform:translate(-50%,-50%) scale(.7) rotate(5deg)}}
+@keyframes ringPulse{0%{transform:translate(-50%,-50%) scale(0);opacity:.9}100%{transform:translate(-50%,-50%) scale(2.8);opacity:0}}
+@keyframes ringPulse2{0%{transform:translate(-50%,-50%) scale(0);opacity:.6}100%{transform:translate(-50%,-50%) scale(4);opacity:0}}
+@keyframes celebOverlay{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes ballScore{0%{opacity:0;transform:translate(-50%,300%) scale(.4) rotate(0deg)}40%{opacity:1;transform:translate(-50%,0%) scale(1.2) rotate(180deg)}65%{transform:translate(-50%,10%) scale(1) rotate(300deg)}85%{transform:translate(-50%,-5%) scale(1.1) rotate(340deg)}100%{opacity:0;transform:translate(-50%,20%) scale(.8) rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── LEGO FACES ──────────────────────────────────────────────────────────────
+/* Each face SVG: viewBox 0 0 100 115, head center ~(50,72) */
+
+const HEAD = (extras=null) => <>
+  <ellipse cx="50" cy="72" rx="27" ry="29" fill="#FFD870" stroke="#C8A826" strokeWidth="1.5"/>
+  <ellipse cx="23" cy="72" rx="4" ry="5.5" fill="#FFD870" stroke="#C8A826" strokeWidth="1.2"/>
+  <ellipse cx="77" cy="72" rx="4" ry="5.5" fill="#FFD870" stroke="#C8A826" strokeWidth="1.2"/>
+  {extras}
+</>;
+
+const EYES_N = () => <>
+  <circle cx="43" cy="67" r="4" fill="#111"/>
+  <circle cx="57" cy="67" r="4" fill="#111"/>
+  <circle cx="44.5" cy="65.5" r="1.2" fill="white"/>
+  <circle cx="58.5" cy="65.5" r="1.2" fill="white"/>
+</>;
+
+const EYES_HALF = () => <>
+  <circle cx="43" cy="67" r="4" fill="#111"/>
+  <circle cx="57" cy="67" r="4" fill="#111"/>
+  <circle cx="44.5" cy="65.8" r="1.2" fill="white"/>
+  <circle cx="58.5" cy="65.8" r="1.2" fill="white"/>
+  <path d="M39 64 Q43 62 47 64" stroke="#FFD870" strokeWidth="3" fill="none"/>
+  <path d="M53 64 Q57 62 61 64" stroke="#FFD870" strokeWidth="3" fill="none"/>
+</>;
+
+const EYES_ANGRY = () => <>
+  <circle cx="43" cy="67" r="4" fill="#111"/>
+  <circle cx="57" cy="67" r="4" fill="#111"/>
+  <circle cx="44.5" cy="65.5" r="1.2" fill="white"/>
+  <circle cx="58.5" cy="65.5" r="1.2" fill="white"/>
+</>;
+
+const BROW_N = () => <>
+  <path d="M36 58 Q43 55 47 58" stroke="#333" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+  <path d="M53 58 Q57 55 64 58" stroke="#333" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+</>;
+const BROW_ANGRY = () => <>
+  <path d="M36 59 Q43 55 47 58" stroke="#333" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+  <path d="M53 58 Q57 55 64 59" stroke="#333" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+</>;
+const BROW_COOL = () => <>
+  <path d="M37 57 Q43 55 46 57" stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round"/>
+  <path d="M54 57 Q57 55 63 57" stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round"/>
+</>;
+
+const MOUTH_SMILE  = () => <path d="M42 79 Q50 86 58 79" stroke="#111" strokeWidth="2.5" fill="none" strokeLinecap="round"/>;
+const MOUTH_GRIN   = () => <><path d="M38 78 Q50 90 62 78" stroke="#111" strokeWidth="2.5" fill="none" strokeLinecap="round"/><path d="M41 79 Q50 89 59 79 L59 82 Q50 89 41 82 Z" fill="white"/></>;
+const MOUTH_SERI   = () => <path d="M43 79 L57 79" stroke="#111" strokeWidth="2.5" strokeLinecap="round"/>;
+const MOUTH_SMIRK  = () => <path d="M44 79 Q52 85 58 78" stroke="#111" strokeWidth="2.5" fill="none" strokeLinecap="round"/>;
+const MOUTH_SCOWL  = () => <path d="M43 81 Q50 76 57 81" stroke="#111" strokeWidth="2.5" fill="none" strokeLinecap="round"/>;
+const MOUTH_CALM   = () => <path d="M43 79 Q50 83 57 79" stroke="#111" strokeWidth="2" fill="none" strokeLinecap="round"/>;
+
+// FACES
+const Faces = {
+  // ── SLAM DUNK ──
+  sakuragi: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Big red pompadour */}
+      <ellipse cx="50" cy="36" rx="34" ry="23" fill="#CC1111"/>
+      <ellipse cx="18" cy="54" rx="13" ry="19" fill="#CC1111"/>
+      <ellipse cx="82" cy="54" rx="13" ry="19" fill="#CC1111"/>
+      <ellipse cx="50" cy="48" rx="26" ry="16" fill="#DD2222"/>
+      {HEAD()}
+      {BROW_ANGRY()}<EYES_N/><MOUTH_GRIN/>
+    </svg>
+  ),
+  rukawa: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="44" rx="30" ry="20" fill="#1a1a1a"/>
+      <rect x="17" y="50" width="13" height="28" rx="6" fill="#1a1a1a"/>
+      <rect x="70" y="50" width="13" height="28" rx="6" fill="#1a1a1a"/>
+      {HEAD()}
+      <path d="M26 57 Q38 46 50 48 Q62 46 74 57 Q65 50 50 50 Q35 50 26 57Z" fill="#1a1a1a"/>
+      {BROW_COOL()}<EYES_HALF/><MOUTH_SMIRK/>
+    </svg>
+  ),
+  miyagi: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="46" rx="26" ry="15" fill="#111"/>
+      <path d="M28 55 Q50 38 72 55 Q65 46 50 44 Q35 46 28 55Z" fill="#222"/>
+      {HEAD()}
+      {BROW_N()}<EYES_N/><MOUTH_GRIN/>
+      {/* Headband */}
+      <rect x="24" y="55" width="52" height="7" rx="3" fill="#fff" opacity=".9"/>
+      <rect x="24" y="55" width="52" height="7" rx="3" fill="none" stroke="#ccc" strokeWidth="1"/>
+    </svg>
+  ),
+  akagi: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Nearly bald - very short stubble */}
+      <ellipse cx="50" cy="44" rx="27" ry="14" fill="#222"/>
+      {HEAD()}
+      {BROW_ANGRY()}<EYES_ANGRY/><MOUTH_SERI/>
+    </svg>
+  ),
+  mitsui: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Dark short hair swept back */}
+      <ellipse cx="50" cy="43" rx="31" ry="15" fill="#1c1c1c"/>
+      <path d="M20 56 Q50 40 80 56 Q70 47 50 45 Q30 47 20 56Z" fill="#1c1c1c"/>
+      <path d="M19 57 Q16 62 20 70" stroke="#1c1c1c" strokeWidth="9" strokeLinecap="round" fill="none"/>
+      <path d="M81 57 Q84 62 80 70" stroke="#1c1c1c" strokeWidth="9" strokeLinecap="round" fill="none"/>
+      {HEAD()}
+      {/* Strong determined brows */}
+      <line x1="27" y1="63" x2="43" y2="66" stroke="#3d2b1f" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="57" y1="66" x2="73" y2="63" stroke="#3d2b1f" strokeWidth="4" strokeLinecap="round"/>
+      <EYES_N/>
+      {/* Slight determined smirk */}
+      <path d="M37 86 Q50 92 63 86" stroke="#5d3a1a" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+    </svg>
+  ),
+
+  // ── NARUTO ──
+  naruto: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Blonde spiky */}
+      <ellipse cx="50" cy="38" rx="30" ry="20" fill="#E8B800"/>
+      <polygon points="35,44 30,22 42,38" fill="#E8B800"/>
+      <polygon points="50,36 46,14 55,34" fill="#E8B800"/>
+      <polygon points="65,44 70,22 58,38" fill="#E8B800"/>
+      <polygon points="30,50 22,32 35,48" fill="#D4A800"/>
+      <polygon points="70,50 78,32 65,48" fill="#D4A800"/>
+      {HEAD()}
+      {/* Forehead protector */}
+      <rect x="24" y="54" width="52" height="8" rx="3" fill="#4a4a6a"/>
+      <rect x="35" y="56" width="30" height="4" rx="2" fill="#888" opacity=".7"/>
+      <line x1="50" y1="56" x2="50" y2="60" stroke="#666" strokeWidth="1"/>
+      {BROW_N()}
+      <circle cx="43" cy="67" r="4" fill="#3a8aa0"/>
+      <circle cx="57" cy="67" r="4" fill="#3a8aa0"/>
+      <circle cx="44.5" cy="65.5" r="1.5" fill="#111"/>
+      <circle cx="58.5" cy="65.5" r="1.5" fill="#111"/>
+      <circle cx="44.5" cy="65" r=".7" fill="white"/>
+      <circle cx="58.5" cy="65" r=".7" fill="white"/>
+      {/* Whisker marks */}
+      <line x1="28" y1="68" x2="40" y2="70" stroke="#c8a87a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="27" y1="72" x2="40" y2="72" stroke="#c8a87a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="28" y1="76" x2="40" y2="74" stroke="#c8a87a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="60" y1="70" x2="72" y2="68" stroke="#c8a87a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="60" y1="72" x2="73" y2="72" stroke="#c8a87a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="60" y1="74" x2="72" y2="76" stroke="#c8a87a" strokeWidth="1.5" strokeLinecap="round"/>
+      <MOUTH_GRIN/>
+    </svg>
+  ),
+  sasuke: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="40" rx="26" ry="18" fill="#111"/>
+      {/* Duck-tail back spike */}
+      <path d="M62 52 Q75 48 80 42 Q72 52 65 56Z" fill="#111"/>
+      {/* Left side hair */}
+      <path d="M24 60 Q22 50 26 42 Q30 52 28 62Z" fill="#111"/>
+      {HEAD()}
+      <path d="M27 57 Q38 46 52 50 Q42 46 34 50 Z" fill="#111"/>
+      {BROW_ANGRY()}
+      <circle cx="43" cy="67" r="4" fill="#111"/>
+      <circle cx="57" cy="67" r="4" fill="#111"/>
+      <circle cx="44.5" cy="65.5" r="1.2" fill="white"/>
+      <circle cx="58.5" cy="65.5" r="1.2" fill="white"/>
+      <MOUTH_SERI/>
+    </svg>
+  ),
+  kakashi: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Silver spiky hair */}
+      <ellipse cx="50" cy="38" rx="28" ry="20" fill="#aaa"/>
+      <polygon points="38,46 32,24 44,42" fill="#aaa"/>
+      <polygon points="50,38 46,16 55,36" fill="#aaa"/>
+      <polygon points="62,46 68,24 56,42" fill="#aaa"/>
+      <polygon points="30,52 24,34 36,50" fill="#999"/>
+      {HEAD()}
+      {/* Forehead protector tilted */}
+      <rect x="24" y="54" width="52" height="8" rx="3" fill="#4a4a6a" transform="rotate(-5 50 58)"/>
+      <rect x="35" y="56" width="30" height="4" rx="2" fill="#888" opacity=".7"/>
+      {/* One eye visible (right) */}
+      <circle cx="57" cy="67" r="4" fill="#111"/>
+      <circle cx="58.5" cy="65.5" r="1.2" fill="white"/>
+      {/* Left eye hidden by protector */}
+      <path d="M36 57 Q43 54 47 57" stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      <path d="M53 57 Q57 54 63 57" stroke="#333" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      {/* Mask covers lower face */}
+      <ellipse cx="50" cy="82" rx="22" ry="14" fill="#4a4a6a"/>
+      <path d="M28 72 Q50 68 72 72 L72 96 Q50 100 28 96 Z" fill="#4a4a6a"/>
+    </svg>
+  ),
+  itachi: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Long black hair */}
+      <rect x="18" y="44" width="14" height="50" rx="7" fill="#0d0d0d"/>
+      <rect x="68" y="44" width="14" height="50" rx="7" fill="#0d0d0d"/>
+      <ellipse cx="50" cy="40" rx="28" ry="20" fill="#0d0d0d"/>
+      {/* Hair tie / back ponytail suggestion */}
+      <ellipse cx="50" cy="44" rx="26" ry="16" fill="#111"/>
+      {HEAD()}
+      {BROW_COOL()}
+      <circle cx="43" cy="67" r="4" fill="#111"/>
+      <circle cx="57" cy="67" r="4" fill="#111"/>
+      {/* Sharingan red eyes */}
+      <circle cx="43" cy="67" r="3" fill="#8B0000"/>
+      <circle cx="57" cy="67" r="3" fill="#8B0000"/>
+      <circle cx="43" cy="67" r="1.2" fill="#111"/>
+      <circle cx="57" cy="67" r="1.2" fill="#111"/>
+      <circle cx="43.8" cy="66.2" r=".6" fill="white"/>
+      <circle cx="57.8" cy="66.2" r=".6" fill="white"/>
+      {/* Under-eye marks */}
+      <path d="M38 72 L41 74" stroke="#6b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M62 72 L59 74" stroke="#6b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+      <MOUTH_SERI/>
+    </svg>
+  ),
+
+  // ── DRAGON BALL ──
+  goku: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Extreme black spiky hair */}
+      <polygon points="50,14 40,38 60,38" fill="#111"/>
+      <polygon points="38,20 28,44 46,40" fill="#111"/>
+      <polygon points="62,20 72,44 54,40" fill="#111"/>
+      <polygon points="28,30 18,50 36,46" fill="#111"/>
+      <polygon points="72,30 82,50 64,46" fill="#111"/>
+      <polygon points="22,44 14,60 30,56" fill="#111"/>
+      <polygon points="78,44 86,60 70,56" fill="#111"/>
+      <ellipse cx="50" cy="42" rx="28" ry="16" fill="#111"/>
+      {HEAD()}
+      {BROW_N()}<EYES_N/><MOUTH_GRIN/>
+    </svg>
+  ),
+  vegeta: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Tall flame hair */}
+      <polygon points="50,6 34,46 50,40 66,46" fill="#111"/>
+      <polygon points="38,12 28,46 42,40" fill="#111"/>
+      <polygon points="62,12 72,46 58,40" fill="#111"/>
+      <ellipse cx="50" cy="44" rx="26" ry="14" fill="#111"/>
+      {/* Widow's peak */}
+      <polygon points="50,52 44,46 56,46" fill="#111"/>
+      {HEAD()}
+      {BROW_ANGRY()}<EYES_ANGRY/><MOUTH_SCOWL/>
+    </svg>
+  ),
+  gohan: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,22 38,44 62,44" fill="#111"/>
+      <polygon points="40,26 30,46 46,42" fill="#111"/>
+      <polygon points="60,26 70,46 54,42" fill="#111"/>
+      <ellipse cx="50" cy="44" rx="26" ry="15" fill="#111"/>
+      {HEAD()}
+      {BROW_N()}<EYES_N/><MOUTH_SMILE/>
+    </svg>
+  ),
+  freezer: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Alien head extensions */}
+      <ellipse cx="50" cy="44" rx="32" ry="20" fill="#8B5CF6"/>
+      <ellipse cx="28" cy="54" rx="10" ry="14" fill="#7C3AED"/>
+      <ellipse cx="72" cy="54" rx="10" ry="14" fill="#7C3AED"/>
+      {/* White head plates */}
+      <ellipse cx="50" cy="48" rx="22" ry="14" fill="#f0f0f0"/>
+      {HEAD(
+        <>
+          <ellipse cx="50" cy="52" rx="26" ry="7" fill="#f0f0f0" opacity=".6"/>
+        </>
+      )}
+      {BROW_COOL()}
+      {/* Narrow alien eyes */}
+      <ellipse cx="43" cy="67" rx="5" ry="3" fill="#CC0000"/>
+      <ellipse cx="57" cy="67" rx="5" ry="3" fill="#CC0000"/>
+      <ellipse cx="43" cy="67" rx="2" ry="2" fill="#111"/>
+      <ellipse cx="57" cy="67" rx="2" ry="2" fill="#111"/>
+      <MOUTH_CALM/>
+    </svg>
+  ),
+
+  // ── ONE PIECE ──
+  luffy: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Straw hat */}
+      <ellipse cx="50" cy="46" rx="40" ry="8" fill="#E8B800"/>
+      <ellipse cx="50" cy="42" rx="25" ry="16" fill="#D4A800"/>
+      <ellipse cx="50" cy="38" rx="23" ry="14" fill="#C89600"/>
+      {/* Black hair under hat */}
+      <ellipse cx="50" cy="50" rx="27" ry="10" fill="#111"/>
+      {HEAD()}
+      {BROW_N()}<EYES_N/>
+      {/* Scar under left eye */}
+      <path d="M36 73 L40 77" stroke="#c0392b" strokeWidth="2" strokeLinecap="round"/>
+      <MOUTH_GRIN/>
+    </svg>
+  ),
+  zoro: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Green short hair */}
+      <ellipse cx="50" cy="44" rx="27" ry="16" fill="#2d8a4e"/>
+      <path d="M26 58 Q50 38 74 58 Q66 46 50 44 Q34 46 26 58Z" fill="#2d8a4e"/>
+      {HEAD()}
+      {/* Scar through left eye */}
+      <path d="M34 60 L40 74" stroke="#c0392b" strokeWidth="2" strokeLinecap="round"/>
+      {/* 3 earrings (right ear) */}
+      <circle cx="77" cy="68" r="2" fill="#FFD700"/>
+      <circle cx="77" cy="74" r="2" fill="#FFD700"/>
+      <circle cx="77" cy="80" r="2" fill="#FFD700"/>
+      {BROW_ANGRY()}
+      <circle cx="43" cy="67" r="4" fill="#111"/>
+      <circle cx="57" cy="67" r="4" fill="#111"/>
+      <circle cx="44.5" cy="65.5" r="1.2" fill="white"/>
+      <circle cx="58.5" cy="65.5" r="1.2" fill="white"/>
+      <MOUTH_SERI/>
+    </svg>
+  ),
+  sanji: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Blond hair - side sweep covering left eye */}
+      <ellipse cx="50" cy="42" rx="28" ry="18" fill="#E8C830"/>
+      <ellipse cx="32" cy="54" rx="16" ry="20" fill="#E8C830"/>
+      <path d="M24 52 Q32 42 46 48 Q38 44 26 58Z" fill="#D4A800"/>
+      {HEAD()}
+      {/* Left eye hidden by hair sweep */}
+      {BROW_COOL()}
+      <circle cx="57" cy="67" r="4" fill="#111"/>
+      <circle cx="58.5" cy="65.5" r="1.2" fill="white"/>
+      {/* Swirl eyebrow */}
+      <path d="M53 57 Q58 53 64 57" stroke="#333" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+      <MOUTH_SMIRK/>
+      {/* Suit collar */}
+      <path d="M36 96 Q50 90 64 96 L64 102 Q50 98 36 102Z" fill="#1a1a2e"/>
+      <path d="M50 90 L50 102" stroke="#888" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+  ),
+
+  // ── BLEACH ──
+  ichigo: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Orange spiky hair */}
+      <ellipse cx="50" cy="40" rx="28" ry="20" fill="#E85C00"/>
+      <polygon points="46,36 40,16 54,34" fill="#E85C00"/>
+      <polygon points="58,38 64,18 54,36" fill="#E85C00"/>
+      <polygon points="36,42 28,24 42,40" fill="#D45000"/>
+      <polygon points="64,42 72,24 58,40" fill="#D45000"/>
+      {HEAD()}
+      {BROW_ANGRY()}<EYES_ANGRY/><MOUTH_SCOWL/>
+    </svg>
+  ),
+  aizen: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Brown parted hair, combed back */}
+      <ellipse cx="50" cy="42" rx="28" ry="18" fill="#6B4226"/>
+      <path d="M26 56 Q50 36 74 56 Q65 46 50 44 Q35 46 26 56Z" fill="#6B4226"/>
+      {/* Center part */}
+      <line x1="50" y1="38" x2="50" y2="50" stroke="#8B5C36" strokeWidth="2"/>
+      {HEAD()}
+      {/* Glasses */}
+      <ellipse cx="43" cy="66" rx="7" ry="5" fill="none" stroke="#aaa" strokeWidth="1.5"/>
+      <ellipse cx="57" cy="66" rx="7" ry="5" fill="none" stroke="#aaa" strokeWidth="1.5"/>
+      <line x1="50" y1="66" x2="50" y2="66" stroke="#aaa" strokeWidth="1.5"/>
+      <line x1="36" y1="64" x2="33" y2="63" stroke="#aaa" strokeWidth="1.2"/>
+      <line x1="64" y1="64" x2="67" y2="63" stroke="#aaa" strokeWidth="1.2"/>
+      {BROW_COOL()}
+      <circle cx="43" cy="66" r="2.5" fill="#2c3e50"/>
+      <circle cx="57" cy="66" r="2.5" fill="#2c3e50"/>
+      <circle cx="43.8" cy="65.2" r=".8" fill="white"/>
+      <circle cx="57.8" cy="65.2" r=".8" fill="white"/>
+      <MOUTH_CALM/>
+    </svg>
+  ),
+
+  // ── ATTACK ON TITAN ──
+  levi: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Undercut - dark, sides very short, top longer */}
+      <ellipse cx="50" cy="44" rx="28" ry="18" fill="#2c2c3a"/>
+      <ellipse cx="50" cy="50" rx="27" ry="10" fill="#1a1a26"/>
+      <path d="M26 58 Q50 38 74 58 Q65 46 50 46 Q35 46 26 58Z" fill="#2c2c3a"/>
+      {/* Side stubble */}
+      <ellipse cx="24" cy="66" rx="5" ry="14" fill="#1a1a26"/>
+      <ellipse cx="76" cy="66" rx="5" ry="14" fill="#1a1a26"/>
+      {HEAD()}
+      {BROW_ANGRY()}<EYES_ANGRY/><MOUTH_SCOWL/>
+    </svg>
+  ),
+  eren: () => (
+    <svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      {/* Brown medium hair, flows down sides */}
+      <ellipse cx="50" cy="42" rx="28" ry="20" fill="#5C3A1E"/>
+      <rect x="18" y="50" width="12" height="30" rx="6" fill="#5C3A1E"/>
+      <rect x="70" y="50" width="12" height="30" rx="6" fill="#5C3A1E"/>
+      <path d="M26 56 Q50 36 74 56 Q65 46 50 46 Q35 46 26 56Z" fill="#5C3A1E"/>
+      {HEAD()}
+      {BROW_ANGRY()}
+      {/* Green eyes */}
+      <circle cx="43" cy="67" r="4" fill="#2d6a2d"/>
+      <circle cx="57" cy="67" r="4" fill="#2d6a2d"/>
+      <circle cx="43" cy="67" r="2" fill="#111"/>
+      <circle cx="57" cy="67" r="2" fill="#111"/>
+      <circle cx="43.8" cy="66.2" r=".8" fill="white"/>
+      <circle cx="57.8" cy="66.2" r=".8" fill="white"/>
+      <MOUTH_SCOWL/>
+    </svg>
+  ),
+};
+
+// ─── CHARACTER DATA ───────────────────────────────────────────────────────────
+const CHARS = [
+  { id:'sakuragi', name:'Sakuragi', serie:'Slam Dunk', color:'#e53e3e',
+    desc:'Genio sin pulir. Fuerza bruta y salto explosivo.',
+    stats:{ fuerza:90, tecnica:52, velocidad:78, resistencia:93, inteligencia:38 } },
+  { id:'rukawa',   name:'Rukawa',   serie:'Slam Dunk', color:'#3182ce',
+    desc:'Técnica perfecta. El mejor jugador de la secundaria.',
+    stats:{ fuerza:74, tecnica:96, velocidad:94, resistencia:80, inteligencia:88 } },
+  { id:'miyagi',   name:'Miyagi',   serie:'Slam Dunk', color:'#38b2ac',
+    desc:'El líder con corazón. Velocidad y visión de juego.',
+    stats:{ fuerza:68, tecnica:85, velocidad:95, resistencia:82, inteligencia:90 } },
+  { id:'akagi',    name:'Akagi',    serie:'Slam Dunk', color:'#744210',
+    desc:'Capitán del aro. Físico dominante bajo el tablero.',
+    stats:{ fuerza:96, tecnica:78, velocidad:58, resistencia:92, inteligencia:86 } },
+  { id:'mitsui',   name:'Mitsui',   serie:'Slam Dunk', color:'#6b46c1',
+    desc:'El tirador élite. Regresa más fuerte que nunca.',
+    stats:{ fuerza:70, tecnica:96, velocidad:72, resistencia:68, inteligencia:90 } },
+];
+const STAT_META = {
+  fuerza:     { label:'💪 Fuerza',      sport_label:'💪 Físico' },
+  tecnica:    { label:'🎯 Técnica',     sport_label:'🎯 Técnica' },
+  velocidad:  { label:'⚡ Velocidad',   sport_label:'⚡ Velocidad' },
+  resistencia:{ label:'🛡️ Resistencia', sport_label:'🏃 Resistencia' },
+  inteligencia:{ label:'🧠 Inteligencia',sport_label:'🧠 Visión de juego' },
+};
+const STAT_KEYS = Object.keys(STAT_META);
+
+
+// ─── CHARACTER IMAGES (PNG files in same folder) ─────────────────────────────
+function CharFace({ charId, size=80 }) {
+  const c = CHARS.find(ch=>ch.id===charId);
+  const col = c?.color||'#718096';
+  const [err, setErr] = React.useState(false);
+  if (!err) return (
+    <img src={`./${charId}.png`} alt={charId}
+      onError={()=>setErr(true)}
+      style={{width:size,height:size,objectFit:'cover',objectPosition:'top center',display:'block'}}/>
+  );
+  return (
+    <div style={{width:size,height:size,display:'flex',alignItems:'center',justifyContent:'center',
+      background:`radial-gradient(circle at 35% 30%,${col}cc,${col}66)`,fontSize:size*.42,
+      fontFamily:'Bangers',color:'rgba(255,255,255,.95)'}}>{c?.name?.[0]||'?'}</div>
+  );
+}
+
+function CharMini({ char, selected, onSelect }) {
+  return (
+    <div onClick={()=>onSelect(char)} style={{
+      padding:10, borderRadius:14, cursor:'pointer', transition:'all .2s',
+      background: selected ? `${char.color}22` : 'rgba(255,255,255,.04)',
+      border: `2px solid ${selected ? char.color : 'rgba(255,255,255,.08)'}`,
+      boxShadow: selected ? `0 0 16px ${char.color}44` : 'none',
+      transform: selected ? 'scale(1.04)' : 'scale(1)',
+      textAlign:'center',
+    }}>
+      <div style={{borderRadius:'50%',overflow:'hidden',width:54,height:54,
+        margin:'0 auto 6px',border:`2px solid ${char.color}44`,
+        boxShadow: selected ? `0 0 12px ${char.color}66` : 'none'}}>
+        <CharFace charId={char.id} size={54}/>
+      </div>
+      <p style={{fontFamily:'Bangers',fontSize:12,color:char.color,letterSpacing:1,lineHeight:1}}>{char.name}</p>
+    </div>
+  );
+}
+
+function BigCharCard({ char, side, level, stats }) {
+  if (!char) return (
+    <div className="card" style={{flex:1,minHeight:140,display:'flex',alignItems:'center',
+      justifyContent:'center',flexDirection:'column',gap:8,color:'#2d3748'}}>
+      <span style={{fontSize:28}}>❓</span>
+      <span style={{fontSize:12}}>Elige jugador</span>
+    </div>
+  );
+  return (
+    <div className="card" style={{flex:1,padding:14,
+      borderColor:`${char.color}44`,background:`${char.color}0d`,
+      textAlign:side==='B'?'right':'left'}}>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10,
+        flexDirection:side==='B'?'row-reverse':'row'}}>
+        <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',flexShrink:0,
+          border:`3px solid ${char.color}`,boxShadow:`0 0 16px ${char.color}66`}}>
+          <CharFace charId={char.id} size={64}/>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <p className="tf" style={{fontSize:20,color:char.color,lineHeight:1}}>{char.name}</p>
+          <p style={{fontSize:10,color:'#718096',marginBottom:6}}>{char.serie}</p>
+          {level!==null&&(
+            <div style={{display:'inline-flex',alignItems:'center',gap:5,
+              background:'rgba(0,0,0,.3)',borderRadius:6,padding:'3px 8px'}}>
+              <span style={{fontSize:9,color:'#4a5568',letterSpacing:1}}>NVL</span>
+              <span style={{fontSize:18,fontWeight:800,color:char.color,
+                fontFamily:'Bangers',letterSpacing:1}}>{level}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {stats&&(
+        <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:4}}>
+          {STAT_KEYS.map(k=>(
+            <div key={k} style={{display:'flex',alignItems:'center',gap:6,
+              flexDirection:side==='B'?'row-reverse':'row'}}>
+              <span style={{fontSize:8,color:'#4a5568',width:54,flexShrink:0,
+                textAlign:side==='B'?'right':'left',letterSpacing:.5}}>
+                {STAT_META[k].sport_label}
+              </span>
+              <div className="stat-track" style={{flex:1}}>
+                <div className="stat-fill" style={{width:`${stats[k]}%`,
+                  background:`linear-gradient(90deg,${char.color}88,${char.color})`}}/>
+              </div>
+              <span style={{fontSize:9,color:char.color,width:22,flexShrink:0,
+                textAlign:side==='B'?'left':'right'}}>{stats[k]}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── DICE COMPONENT ──────────────────────────────────────────────────────────
+const PIPS_MAP = {
+  1:[[50,50]],
+  2:[[28,28],[72,72]],
+  3:[[28,28],[50,50],[72,72]],
+  4:[[28,28],[72,28],[28,72],[72,72]],
+  5:[[28,28],[72,28],[50,50],[28,72],[72,72]],
+  6:[[28,20],[72,20],[28,50],[72,50],[28,80],[72,80]],
+};
+const FACE_SHOW = {
+  1:'rotateX(0deg)   rotateY(0deg)',
+  2:'rotateX(90deg)  rotateY(0deg)',
+  3:'rotateX(0deg)   rotateY(-90deg)',
+  4:'rotateX(0deg)   rotateY(90deg)',
+  5:'rotateX(-90deg) rotateY(0deg)',
+  6:'rotateX(0deg)   rotateY(180deg)',
+};
+function Dice3D({val, rolling: isRolling, color, size=54}) {
+  const half = size / 2;
+  const r = size / 9;
+  const faceStyle = (extraT, lgt=1) => ({
+    position:'absolute', width:size, height:size, borderRadius:r,
+    backfaceVisibility:'hidden', transform: extraT,
+    background:`linear-gradient(145deg,${color}${lgt>.85?'ff':'cc'},${color}${lgt>.85?'cc':'88'})`,
+    border:`1.5px solid rgba(255,255,255,${lgt*.25})`, overflow:'hidden',
+  });
+  const Pip = ({x,y}) => (
+    <div style={{
+      position:'absolute', left:`${x}%`, top:`${y}%`,
+      width:size/7.5, height:size/7.5,
+      background:'rgba(255,255,255,.95)', borderRadius:'50%',
+      transform:'translate(-50%,-50%)',
+      boxShadow:'0 1px 4px rgba(0,0,0,.7), inset 0 1px 1px rgba(255,255,255,.4)',
+    }}/>
+  );
+  const Face = ({n, transform, lgt}) => (
+    <div style={faceStyle(transform, lgt)}>
+      {n===1&&<><div style={{position:'absolute',inset:0,background:'linear-gradient(145deg,rgba(255,255,255,.2),transparent)',borderRadius:r}}/></>}
+      {(PIPS_MAP[n]||[]).map(([x,y],i)=><Pip key={i} x={x} y={y}/>)}
+    </div>
+  );
+  return (
+    <div style={{width:size, height:size, perspective:`${size*4}px`, flexShrink:0, position:'relative'}}>
+      <div style={{position:'absolute',bottom:-5,left:'10%',right:'10%',height:8,
+        background:'rgba(0,0,0,.5)',borderRadius:'50%',filter:'blur(5px)'}}/>
+      <div style={{
+        width:size, height:size, position:'relative', transformStyle:'preserve-3d',
+        transition: isRolling ? 'none' : 'transform .5s cubic-bezier(.34,1.56,.64,1)',
+        animation: isRolling ? 'diceRollCube .4s linear infinite' : 'none',
+        transform: isRolling ? undefined : (val ? FACE_SHOW[val] : 'rotateX(-22deg) rotateY(28deg)'),
+      }}>
+        <Face n={1} transform={`translateZ(${half}px)`}          lgt={1}/>
+        <Face n={6} transform={`rotateY(180deg) translateZ(${half}px)`} lgt={.7}/>
+        <Face n={3} transform={`rotateY(90deg) translateZ(${half}px)`}  lgt={.8}/>
+        <Face n={4} transform={`rotateY(-90deg) translateZ(${half}px)`} lgt={.75}/>
+        <Face n={2} transform={`rotateX(-90deg) translateZ(${half}px)`} lgt={.9}/>
+        <Face n={5} transform={`rotateX(90deg) translateZ(${half}px)`}  lgt={.6}/>
+      </div>
+      {val&&!isRolling&&<div style={{
+        position:'absolute',inset:-3,borderRadius:r+3,
+        boxShadow:`0 0 16px ${color}88, 0 0 32px ${color}44`, pointerEvents:'none',
+      }}/>}
+      {!val&&!isRolling&&<div style={{
+        position:'absolute',inset:0,display:'flex',alignItems:'center',
+        justifyContent:'center',fontFamily:'Bangers',fontSize:size*.5,
+        color:`${color}44`, pointerEvents:'none',
+      }}>?</div>}
+    </div>
+  );
+}
+
+// ─── CHAR REACTIONS on score ──────────────────────────────────────────────────
+const CHAR_REACTIONS = {
+  sakuragi: { text:'¡SOY UN GENIO!',   color:'#e53e3e', bg:'#e53e3e22' },
+  rukawa:   { text:'...',               color:'#3182ce', bg:'#3182ce22' },
+  miyagi:   { text:'¡VELOCIDAD!',      color:'#38b2ac', bg:'#38b2ac22' },
+  akagi:    { text:'¡POTENCIA!',       color:'#744210', bg:'#74421022' },
+  mitsui:   { text:'¡TRIPLE!!!',       color:'#6b46c1', bg:'#6b46c122' },
+};
+
+// ─── RACE MODE ────────────────────────────────────────────────────────────────
+function RaceMode({ onBack, charStats={}, onResult, selectedChar }) {
+  const TOTAL     = 21;
+  const WIN_NEED  = 2;  // pieces needed to win
+  const SPECIALS  = {
+    4:  { emoji:'⚡', label:'FAST BREAK', text:'+2 pasos', selfD:+2, color:'#22c55e' },
+    7:  { emoji:'🤚', label:'FOUL',       text:'-2 pasos', selfD:-2, color:'#ef4444' },
+    11: { emoji:'🏀', label:'SLAM DUNK',  text:'+3 pasos', selfD:+3, color:'#f59e0b' },
+    14: { emoji:'🛑', label:'BLOQUEO',    text:'CPU -2',   selfD:0, oppD:-2, color:'#7c3aed' },
+    17: { emoji:'3️⃣', label:'TRIPLE',     text:'+3 pasos', selfD:+3, color:'#06b6d4' },
+  };
+  const SHOHOKU = CHARS; // all chars are Shohoku players
+
+  const [char, setChar]               = useState(selectedChar || CHARS[0]);
+  const [aiIdx, setAiIdx]             = useState(0);
+  const [pPos, setPPos]               = useState([0,0,0,0]);
+  const [aPos, setAPos]               = useState([0,0,0,0]);
+  const pPosRef                       = useRef([0,0,0,0]);
+  const aPosRef                       = useRef([0,0,0,0]);
+  const [phase, setPhase]             = useState('player');
+  const [diceVal, setDiceVal]         = useState(null);
+  const [aiDiceVal, setAiDiceVal]     = useState(null);
+  const [rolling, setRolling]         = useState(false);
+  const [aiRolling, setAiRolling]     = useState(false);
+  const [selectLanes, setSelectLanes] = useState([]);
+  const [captureFlash, setCaptureFlash] = useState(null);
+  const [floats, setFloats]           = useState({});
+  const [popup, setPopup]             = useState(null);
+  const [status, setStatus]           = useState('');
+  const [gameOver, setGameOver]       = useState(null);
+  const [hoopAnim, setHoopAnim]       = useState(null); // {player,lane} while scoring
+  const [celebAnim, setCelebAnim]     = useState(null); // {charId,color,text,isPlayer}
+
+  const D = ms => new Promise(res => setTimeout(res, ms));
+  const opponents = SHOHOKU.filter(c => c.id !== char.id);
+  const aiChar = opponents[aiIdx % opponents.length] || CHARS[1];
+
+  // Track has exactly (TOTAL-1) = 20 cells for pos=1..20.
+  // pos=20 (last) sits directly under the finish zone at 13%.
+  // cellH = 75/(TOTAL-1). posY centers piece in its cell.
+  const TC   = TOTAL - 1;                                           // 20 playable rows
+  const CELL = 75 / TC;                                             // 3.75% per cell
+  const posY = pos => pos === 0 ? 94 : 13 + (TC - pos + 0.5) * CELL;
+
+  // A piece can move only if it won't overshoot TOTAL
+  const canMove = (from, roll) => from < TOTAL && from + roll <= TOTAL;
+
+  const setP = (lane, pos) => {
+    pPosRef.current = pPosRef.current.map((v,i) => i===lane ? Math.max(0, Math.min(TOTAL, pos)) : v);
+    setPPos([...pPosRef.current]);
+  };
+  const setA = (lane, pos) => {
+    aPosRef.current = aPosRef.current.map((v,i) => i===lane ? Math.max(0, Math.min(TOTAL, pos)) : v);
+    setAPos([...aPosRef.current]);
+  };
+
+  const showFloat = (player, lane, val) => {
+    const k = `${player}${lane}`;
+    setFloats(f => ({...f, [k]: {val, ts: Date.now()}}));
+    setTimeout(() => setFloats(f => { const n={...f}; delete n[k]; return n; }), 1100);
+  };
+  const showPop = async (sp, ms=1300) => { setPopup(sp); await D(ms); setPopup(null); };
+
+  const moveSteps = async (player, lane, steps) => {
+    const ref    = player==='p' ? pPosRef : aPosRef;
+    const setter = player==='p' ? setP    : setA;
+    const from   = ref.current[lane];
+    const to     = Math.min(TOTAL, from + steps);
+    for (let pos = from+1; pos <= to; pos++) { await D(135); setter(lane, pos); }
+    return to;
+  };
+
+  const checkCapture = async (mover, lane, pos) => {
+    if (pos <= 0 || pos >= TOTAL) return;
+    const oppRef    = mover==='p' ? aPosRef : pPosRef;
+    const oppSetter = mover==='p' ? setA    : setP;
+    if (oppRef.current[lane] !== pos) return;
+    setCaptureFlash(lane);
+    setTimeout(() => setCaptureFlash(null), 900);
+    showFloat(mover==='p' ? 'a' : 'p', lane, '💥');
+    await D(550);
+    oppSetter(lane, 0);
+    setStatus(mover==='p'
+      ? `¡${char.name} capturó al rival en carril ${lane+1}!`
+      : `¡${aiChar.name} capturó tu balón en carril ${lane+1}!`);
+    await D(700);
+  };
+
+  const applySpecial = async (player, lane, pos) => {
+    const sp = SPECIALS[pos];
+    if (!sp) return pos;
+    await showPop(sp, 1100);
+    const delta = sp.selfD || 0;
+    if (delta !== 0) {
+      const newPos = Math.max(0, Math.min(TOTAL, pos + delta));
+      (player==='p' ? setP : setA)(lane, newPos);
+      showFloat(player, lane, delta > 0 ? `+${delta}` : `${delta}`);
+      await D(400);
+      return newPos;
+    }
+    return pos;
+  };
+
+  const checkWin = player =>
+    (player==='p' ? pPosRef : aPosRef).current.filter(p => p >= TOTAL).length >= WIN_NEED;
+
+  const rollDice = async () => {
+    if (phase !== 'player' || !char) return;
+    setRolling(true);
+    const iv = setInterval(() => setDiceVal(Math.ceil(Math.random()*6)), 65);
+    await D(850); clearInterval(iv); setRolling(false);
+    const roll = Math.ceil(Math.random()*6);
+    setDiceVal(roll);
+    const movable = pPosRef.current.map((p,i) => canMove(p, roll) ? i : -1).filter(i => i >= 0);
+    if (!movable.length) {
+      setStatus(`Sacaste ${roll} — ningún balón cabe exacto. Turno CPU.`);
+      await D(1800); setPhase('ai'); await runAI(); return;
+    }
+    setPhase('select'); setSelectLanes(movable);
+    setStatus(`Sacaste ${roll} — toca un balón para moverlo`);
+  };
+
+  const triggerScore = async (scoringChar, isPlayer, lane) => {
+    const rx = CHAR_REACTIONS[scoringChar.id] || { text:'¡CANASTA!', color:'#fff', bg:'#ffffff22' };
+    setHoopAnim({player: isPlayer ? 'p' : 'a', lane});
+    setCelebAnim({charId: scoringChar.id, color: rx.color, bg: rx.bg, text: rx.text, isPlayer});
+    await D(2000);
+    setHoopAnim(null); setCelebAnim(null);
+  };
+
+  const onSelectLane = async lane => {
+    if (phase !== 'select' || !selectLanes.includes(lane)) return;
+    setSelectLanes([]); setPhase('moving');
+    let to = await moveSteps('p', lane, diceVal);
+    showFloat('p', lane, `+${diceVal}`);
+    if (to >= TOTAL) { await triggerScore(char, true, lane); }
+    to = await applySpecial('p', lane, to);
+    await checkCapture('p', lane, to);
+    if (checkWin('p')) { setGameOver('player'); setPhase('gameover'); return; }
+    setPhase('ai'); await D(500); await runAI();
+  };
+
+  const runAI = async () => {
+    setStatus(`${aiChar.name} está tirando...`);
+    await D(700);
+    setAiRolling(true);
+    const iv2 = setInterval(() => setAiDiceVal(Math.ceil(Math.random()*6)), 65);
+    await D(850); clearInterval(iv2); setAiRolling(false);
+    const roll = Math.ceil(Math.random()*6);
+    setAiDiceVal(roll);
+    setStatus(`${aiChar.name} saca ${roll}`);
+    await D(480);
+    const available = aPosRef.current.map((p,i) => canMove(p, roll) ? i : -1).filter(i => i >= 0);
+    if (!available.length) {
+      setStatus(`${aiChar.name} no puede avanzar. ¡Tu turno!`);
+      await D(1400); setPhase('player'); setStatus('¡Tu turno!'); return;
+    }
+    let lane = null;
+    for (const l of available) {
+      const np = aPosRef.current[l] + roll;
+      if (pPosRef.current[l] === np && np > 0 && np < TOTAL) { lane = l; break; }
+    }
+    if (lane === null)
+      lane = available.reduce((b,l) => aPosRef.current[l] > aPosRef.current[b] ? l : b, available[0]);
+    let to = await moveSteps('a', lane, roll);
+    showFloat('a', lane, `+${roll}`);
+    if (to >= TOTAL) { await triggerScore(aiChar, false, lane); }
+    to = await applySpecial('a', lane, to);
+    await checkCapture('a', lane, to);
+    if (checkWin('a')) { setGameOver('ai'); setPhase('gameover'); return; }
+    setPhase('player'); setStatus('¡Tu turno!');
+  };
+
+  // Report result to parent when game ends
+  useEffect(() => {
+    if (gameOver && onResult) onResult(char.id, gameOver);
+  }, [gameOver]);
+
+  const resetGame = () => {
+    pPosRef.current=[0,0,0,0]; aPosRef.current=[0,0,0,0];
+    setPPos([0,0,0,0]); setAPos([0,0,0,0]);
+    setPhase('player'); setGameOver(null);
+    setDiceVal(null); setAiDiceVal(null);
+    setRolling(false); setAiRolling(false);
+    setSelectLanes([]); setFloats({}); setStatus('¡Tu turno!');
+  };
+
+  // === GAME SCREEN ===
+  return (
+    <div style={{position:'fixed',inset:0,background:'#0a1628',zIndex:115,
+      display:'flex',flexDirection:'column',alignItems:'center',overflow:'hidden'}}>
+
+      {/* HEADER */}
+      <div style={{width:'100%',maxWidth:480,flexShrink:0,
+        background:'linear-gradient(90deg,#c8001a,#e8242b,#c8001a)',
+        borderBottom:'3px solid #7a0010',
+        display:'flex',alignItems:'center',padding:'6px 10px',gap:6,position:'relative',zIndex:5}}>
+        {[0,1,2,3,4,5].map(i=>(
+          <div key={i} style={{position:'absolute',top:0,bottom:0,left:`${i*18}%`,width:'7%',
+            background:'rgba(0,0,0,.08)',transform:'skewX(-15deg)',pointerEvents:'none'}}/>
+        ))}
+        <button onClick={()=>{resetGame();onBack();}} style={{
+          background:'rgba(0,0,0,.35)',color:'#fff',border:'2px solid rgba(255,255,255,.4)',
+          fontSize:11,cursor:'pointer',padding:'4px 9px',fontFamily:'Bangers',letterSpacing:1,
+          borderRadius:5,position:'relative',flexShrink:0}}>&#8592; SALIR</button>
+        <div style={{flex:1,textAlign:'center',position:'relative'}}>
+          <p style={{fontFamily:'Bangers',fontSize:18,color:'#fff',letterSpacing:3,lineHeight:1,
+            textShadow:'2px 2px 0 rgba(0,0,0,.5)'}}>
+            {char.name} <span style={{color:'#ffd700'}}>VS</span> {aiChar.name}
+          </p>
+          <p style={{fontSize:8,color:'rgba(255,255,255,.65)',letterSpacing:3,marginTop:1}}>
+            &#183; CARRERA AL ARO &#183; META EXACTA &#183;
+          </p>
+        </div>
+        <div style={{fontFamily:'Bangers',fontSize:11,color:'#fff',
+          textAlign:'right',lineHeight:1.5,flexShrink:0}}>
+          <p style={{color:'#ffd700'}}>&#10003; {pPos.filter(p=>p>=TOTAL).length}/{WIN_NEED}</p>
+          <p style={{color:'rgba(255,255,255,.5)'}}>CPU {aPos.filter(p=>p>=TOTAL).length}/{WIN_NEED}</p>
+        </div>
+      </div>
+
+      {/* MAIN ROW */}
+      <div style={{width:'100%',maxWidth:480,flex:1,minHeight:0,display:'flex',overflow:'hidden'}}>
+
+        {/* LEFT — PLAYER CARD */}
+        <div style={{width:110,flexShrink:0,
+          background:'linear-gradient(180deg,#0d1c3a,#0a1628)',
+          borderRight:`3px solid ${char.color}44`,
+          display:'flex',flexDirection:'column',alignItems:'center',
+          padding:'10px 6px',gap:5,
+          boxShadow:`inset -8px 0 24px ${char.color}18`}}>
+          <div style={{position:'relative'}}>
+            <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',
+              border:`3px solid ${char.color}`,
+              boxShadow:`0 0 20px ${char.color}aa, 0 0 40px ${char.color}44`,
+              background:char.color,
+              animation:(phase==='player'||phase==='select')?'charPulse 1.8s ease infinite':'none'}}>
+              <CharFace charId={char.id} size={64}/>
+            </div>
+            {(phase==='player'||phase==='select')&&(
+              <div style={{position:'absolute',top:2,right:2,width:12,height:12,borderRadius:'50%',
+                background:'#22c55e',border:'2px solid #0a1628',boxShadow:'0 0 8px #22c55e'}}/>
+            )}
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:13,color:char.color,letterSpacing:2,
+            textAlign:'center',lineHeight:1,textShadow:`0 0 12px ${char.color}88`}}>{char.name}</p>
+          <div style={{display:'flex',gap:4}}>
+            {[0,1,2,3].map(i=>(
+              <div key={i} style={{
+                width:18,height:18,borderRadius:'50%',
+                background:pPos[i]>=TOTAL?'transparent':'rgba(255,255,255,.1)',
+                border:`2px solid ${pPos[i]>=TOTAL?char.color:'rgba(255,255,255,.15)'}`,
+                boxShadow:pPos[i]>=TOTAL?`0 0 10px ${char.color}`:'none',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:pPos[i]>=TOTAL?13:0,
+                animation:pPos[i]>=TOTAL?'ballPip .5s cubic-bezier(.175,.885,.32,1.275)':'none',
+                transition:'all .4s'}}>
+                {pPos[i]>=TOTAL?'🏀':''}
+              </div>
+            ))}
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:26,color:'#fff',lineHeight:1,
+            textShadow:`0 0 14px ${char.color}`}}>
+            {pPos.filter(p=>p>=TOTAL).length}
+            <span style={{fontSize:11,color:`${char.color}88`}}>/{WIN_NEED}</span>
+          </p>
+          <div style={{background:`linear-gradient(145deg,${char.color}cc,${char.color}88)`,
+            borderRadius:12,padding:4,
+            boxShadow:`0 4px 16px ${char.color}66, inset 0 1px 0 rgba(255,255,255,.3)`,
+            border:`2px solid ${char.color}`}}>
+            <Dice3D val={diceVal} rolling={rolling} color={char.color} size={58}/>
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:10,letterSpacing:2,
+            color:rolling?char.color:(phase==='player'?'#aaa':'#4a5568'),
+            textShadow:rolling?`0 0 10px ${char.color}`:'none'}}>
+            {rolling?'...':(phase==='player'||phase==='select')?'TIRA':''}
+          </p>
+        </div>
+
+        {/* CENTER TRACK */}
+        <div style={{flex:1,position:'relative',overflow:'hidden',
+          background:'#e8dfc4',boxShadow:'inset 0 0 30px rgba(0,0,0,.15)'}}>
+
+          {/* Lane backgrounds */}
+          {[0,1,2,3].map(i=>(
+            <div key={i} style={{position:'absolute',left:`${i*25}%`,width:'25%',top:'10%',bottom:'12%',
+              background:i%2===0?'rgba(255,255,255,.18)':'rgba(0,0,0,.05)',pointerEvents:'none'}}/>
+          ))}
+          {/* Lane dividers */}
+          {[1,2,3].map(i=>(
+            <div key={i} style={{position:'absolute',left:`${i*25}%`,top:0,bottom:0,
+              width:1.5,background:'rgba(100,70,20,.3)',zIndex:2}}/>
+          ))}
+
+          {/* FINISH ZONE — BASKETBALL HOOP */}
+          <div style={{position:'absolute',top:0,left:0,right:0,height:'13%',zIndex:3,overflow:'hidden',
+            background:'linear-gradient(180deg,#0a0a1a,#1a1030)',
+            borderBottom:'3px solid #ff6b0088'}}>
+            {/* Orange glow top bar */}
+            <div style={{position:'absolute',top:0,left:0,right:0,height:3,
+              background:'linear-gradient(90deg,transparent,#ff6b00,#ff8800,transparent)'}}/>
+            <svg width="100%" height="100%" viewBox="0 0 400 80" preserveAspectRatio="xMidYMid meet"
+              style={{position:'absolute',inset:0}}>
+              {/* Court lines */}
+              <rect x="0" y="0" width="400" height="80" fill="#c8a96e" opacity=".08"/>
+              {/* Backboard */}
+              <rect x="158" y="2" width="84" height="44" rx="3" fill="#f0f0f0" stroke="#444" strokeWidth="2.5"/>
+              <rect x="165" y="8" width="70" height="30" rx="2" fill="white" stroke="#e8242b" strokeWidth="2"/>
+              {/* Pole */}
+              <line x1="200" y1="46" x2="200" y2="66" stroke="#888" strokeWidth="5" strokeLinecap="round"/>
+              {/* Rim */}
+              <ellipse cx="200" cy="66" rx="30" ry="7" fill="none" stroke="#ff5500" strokeWidth="5"
+                style={{animation:hoopAnim?'hoopFlash .3s ease 3':'none'}}/>
+              <ellipse cx="200" cy="66" rx="30" ry="7" fill="none" stroke="#ff8800"
+                strokeWidth="2" strokeDasharray="5 3" opacity=".7"/>
+              {/* Net */}
+              <path d="M170 70 L173 80 L178 74 L183 80 L200 77 L217 80 L222 74 L227 80 L230 70"
+                fill="none" stroke="rgba(255,255,255,.75)" strokeWidth="1.8" strokeLinejoin="round"
+                style={{animation:hoopAnim?'netSwish .5s ease .25s':'none'}}/>
+              <line x1="173" y1="75" x2="227" y2="75" stroke="rgba(255,255,255,.35)" strokeWidth="1"/>
+              {/* Glow under rim */}
+              <ellipse cx="200" cy="66" rx="36" ry="9" fill="none" stroke="#ff6b0033" strokeWidth="10"/>
+              {/* META label */}
+              <text x="200" y="58" textAnchor="middle" fontFamily="Bangers" fontSize="7"
+                fill="#ffffff44" letterSpacing="4">META</text>
+            </svg>
+
+            {/* Basketball animation when scoring */}
+            {hoopAnim&&(
+              <div style={{position:'absolute',left:`${hoopAnim.lane*25+12.5}%`,top:'40%',
+                zIndex:20,pointerEvents:'none',
+                animation:'ballFly 1.35s cubic-bezier(.22,1,.36,1) forwards'}}>
+                <span style={{fontSize:28,display:'block',filter:'drop-shadow(0 4px 8px rgba(0,0,0,.8))'}}>🏀</span>
+              </div>
+            )}
+            {hoopAnim&&(
+              <div style={{position:'absolute',left:'50%',top:'50%',zIndex:21,pointerEvents:'none',
+                animation:'scoreLabel 1.35s ease forwards'}}>
+                <span style={{fontFamily:'Bangers',fontSize:22,
+                  color:hoopAnim.player==='p'?'#22c55e':'#ef4444',
+                  textShadow:`0 0 20px ${hoopAnim.player==='p'?'#22c55e':'#ef4444'}`,
+                  whiteSpace:'nowrap'}}>
+                  {hoopAnim.player==='p'?'¡CANASTA!':'CPU ANOTA'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Cell grid lines — TC=20 cells, no phantom row */}
+          {Array.from({length:TC+1},(_,i)=>(
+            <div key={i} style={{position:'absolute',left:0,right:0,
+              top:`${13+i*CELL}%`,height:1,background:'rgba(100,70,15,.18)',zIndex:1}}/>
+          ))}
+
+          {/* Special cell bands */}
+          {Object.entries(SPECIALS).map(([posStr,sp])=>{
+            const pos=parseInt(posStr);
+            const topPct=13+(TC-pos)*CELL+CELL*0.1;
+            return(
+              <div key={pos} style={{
+                position:'absolute',left:0,right:0,
+                top:`${topPct}%`,height:`${CELL*0.8}%`,
+                background:`${sp.color}30`,
+                borderTop:`2px solid ${sp.color}66`,
+                borderBottom:`1px solid ${sp.color}22`,
+                display:'flex',alignItems:'center',justifyContent:'center',gap:4,
+                pointerEvents:'none',zIndex:2}}>
+                <span style={{fontSize:11}}>{sp.emoji}</span>
+                <span style={{fontFamily:'Bangers',fontSize:9,color:sp.color,
+                  letterSpacing:1,textShadow:`0 0 8px ${sp.color}`}}>{sp.label}</span>
+              </div>
+            );
+          })}
+
+          {/* LAST STEP — subtle shield row (pos=TC=20, directly under finish zone) */}
+          {(()=>{
+            const topPct = 13;          // pos=20 cell starts immediately at finish zone bottom
+            const shieldTop = topPct + CELL/2;
+            return(
+              <React.Fragment>
+                {[0,1,2,3].map(lane=>(
+                  <div key={lane} style={{
+                    position:'absolute',
+                    left:`${lane*25+12.5}%`,
+                    top:`${shieldTop}%`,
+                    transform:'translate(-50%,-50%)',
+                    pointerEvents:'none',zIndex:2,opacity:.38}}>
+                    <svg width="14" height="16" viewBox="0 0 20 24" fill="#5c3a10">
+                      {/* Cup body */}
+                      <path d="M3 0H17L15 10Q13 14 10 14Q7 14 5 10Z"/>
+                      {/* Left handle */}
+                      <path d="M3 2C1 2 0 4 0 6C0 8 1 9 3 9L4 7C2 7 2 5 3 4Z"/>
+                      {/* Right handle */}
+                      <path d="M17 2C19 2 20 4 20 6C20 8 19 9 17 9L16 7C18 7 18 5 17 4Z"/>
+                      {/* Stem */}
+                      <rect x="9" y="14" width="2" height="4"/>
+                      {/* Base */}
+                      <rect x="5" y="18" width="10" height="3" rx="1"/>
+                    </svg>
+                  </div>
+                ))}
+              </React.Fragment>
+            );
+          })()}
+
+          {/* PIECES */}
+          {[0,1,2,3].map(lane=>(
+            <React.Fragment key={lane}>
+              {/* CPU piece */}
+              {aPos[lane]<TOTAL&&(
+                <div style={{
+                  position:'absolute',
+                  left:aPos[lane]===0?`${lane*25+18}%`:`${lane*25+12.5}%`,
+                  top:aPos[lane]===0?'94%':`${posY(aPos[lane])}%`,
+                  transform:'translate(-50%,-50%)',
+                  transition:'top 0.14s cubic-bezier(.4,0,.2,1), left 0.18s ease',
+                  zIndex:5}}>
+                  <div style={{position:'absolute',bottom:-4,left:'50%',transform:'translateX(-50%)',
+                    width:26,height:6,borderRadius:'50%',background:'rgba(0,0,0,.3)',filter:'blur(3px)'}}/>
+                  <div style={{width:32,height:32,borderRadius:'50%',overflow:'hidden',
+                    border:`3px solid ${aiChar.color}`,
+                    boxShadow:`0 0 12px ${aiChar.color}aa`,
+                    background:`radial-gradient(circle at 35% 35%,${aiChar.color}ff,${aiChar.color}88)`}}>
+                    <CharFace charId={aiChar.id} size={32}/>
+                  </div>
+                  <div style={{position:'absolute',bottom:-9,left:'50%',transform:'translateX(-50%)',
+                    fontFamily:'Bangers',fontSize:6,color:'#fff',letterSpacing:.5,
+                    background:`${aiChar.color}cc`,padding:'0 3px',borderRadius:2,whiteSpace:'nowrap'}}>CPU</div>
+                  {floats[`a${lane}`]&&(
+                    <div key={floats[`a${lane}`].ts} style={{
+                      position:'absolute',top:'-22px',left:'50%',transform:'translateX(-50%)',
+                      fontFamily:'Bangers',fontSize:13,color:'#ef4444',whiteSpace:'nowrap',
+                      animation:'floatPoints .9s ease forwards'}}>
+                      {floats[`a${lane}`].val}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* PLAYER piece */}
+              {pPos[lane]<TOTAL&&(
+                <div onClick={()=>onSelectLane(lane)} style={{
+                  position:'absolute',
+                  left:pPos[lane]===0?`${lane*25+7}%`:`${lane*25+12.5}%`,
+                  top:pPos[lane]===0?'94%':`${posY(pPos[lane])}%`,
+                  transform:'translate(-50%,-50%)',
+                  transition:'top 0.14s cubic-bezier(.4,0,.2,1), left 0.18s ease',
+                  zIndex:6,
+                  cursor:selectLanes.includes(lane)?'pointer':'default'}}>
+                  {selectLanes.includes(lane)&&(
+                    <div style={{position:'absolute',inset:-9,borderRadius:'50%',
+                      background:`${char.color}22`,border:`2.5px solid ${char.color}`,
+                      animation:'charPulse 0.65s ease infinite'}}/>
+                  )}
+                  <div style={{position:'absolute',bottom:-4,left:'50%',transform:'translateX(-50%)',
+                    width:28,height:6,borderRadius:'50%',background:'rgba(0,0,0,.32)',filter:'blur(3px)'}}/>
+                  <div style={{
+                    width:34,height:34,borderRadius:'50%',overflow:'hidden',
+                    border:`3px solid ${char.color}`,
+                    boxShadow:selectLanes.includes(lane)
+                      ?`0 0 22px ${char.color},0 0 40px ${char.color}66`
+                      :`0 0 12px ${char.color}aa`,
+                    background:`radial-gradient(circle at 35% 35%,${char.color}ff,${char.color}88)`}}>
+                    <CharFace charId={char.id} size={34}/>
+                  </div>
+                  {floats[`p${lane}`]&&(
+                    <div key={floats[`p${lane}`].ts} style={{
+                      position:'absolute',top:'-22px',left:'50%',transform:'translateX(-50%)',
+                      fontFamily:'Bangers',fontSize:13,color:'#22c55e',whiteSpace:'nowrap',
+                      animation:'floatPoints .9s ease forwards',textShadow:'0 0 8px #22c55e'}}>
+                      {floats[`p${lane}`].val}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Finished player badge */}
+              {pPos[lane]>=TOTAL&&(
+                <div style={{position:'absolute',left:`${lane*25+6}%`,top:'7%',
+                  transform:'translate(-50%,-50%)',zIndex:7}}>
+                  <div style={{width:24,height:24,borderRadius:'50%',
+                    background:char.color,border:'2.5px solid #fff',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:11,boxShadow:`0 0 12px ${char.color}`}}>&#10003;</div>
+                </div>
+              )}
+              {/* Finished CPU badge */}
+              {aPos[lane]>=TOTAL&&(
+                <div style={{position:'absolute',left:`${lane*25+19}%`,top:'7%',
+                  transform:'translate(-50%,-50%)',zIndex:6}}>
+                  <div style={{width:24,height:24,borderRadius:'50%',
+                    background:aiChar.color,border:'2.5px solid #fff',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:11,boxShadow:`0 0 12px ${aiChar.color}`}}>&#10003;</div>
+                </div>
+              )}
+
+              {/* Capture flash */}
+              {captureFlash===lane&&(
+                <div style={{position:'absolute',left:`${lane*25}%`,width:'25%',
+                  top:0,bottom:0,background:'rgba(255,220,0,.45)',
+                  animation:'cellFlash .9s ease',pointerEvents:'none',zIndex:10}}/>
+              )}
+            </React.Fragment>
+          ))}
+
+          {/* START ZONE */}
+          <div style={{position:'absolute',bottom:0,left:0,right:0,height:'12%',
+            background:'linear-gradient(180deg,#2d8a2d,#1a5a1a)',
+            borderTop:'3px solid #44cc44',zIndex:3,
+            display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <p style={{fontFamily:'Bangers',fontSize:10,color:'rgba(255,255,255,.9)',
+              letterSpacing:4,textShadow:'1px 1px 0 rgba(0,0,0,.5)'}}>START</p>
+          </div>
+
+          {/* POPUP */}
+          {popup&&(
+            <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,.75)',
+              display:'flex',alignItems:'center',justifyContent:'center',zIndex:20}}>
+              <div style={{
+                background:'linear-gradient(145deg,#0a0020,#1a0030)',
+                border:`3px solid ${popup.color}`,borderRadius:14,
+                padding:'16px 24px',textAlign:'center',
+                animation:'zoomIn .3s cubic-bezier(.175,.885,.32,1.275)',
+                boxShadow:`0 0 50px ${popup.color}88`}}>
+                <p style={{fontSize:36,marginBottom:5}}>{popup.emoji}</p>
+                <p style={{fontFamily:'Bangers',fontSize:24,color:popup.color,
+                  letterSpacing:3,textShadow:`0 0 20px ${popup.color}`,marginBottom:4}}>{popup.label}</p>
+                <p style={{fontSize:11,color:'rgba(255,255,255,.75)'}}>{popup.text}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT — CPU CARD */}
+        <div style={{width:110,flexShrink:0,
+          background:'linear-gradient(180deg,#0d1c3a,#0a1628)',
+          borderLeft:`3px solid ${aiChar.color}44`,
+          display:'flex',flexDirection:'column',alignItems:'center',
+          padding:'10px 6px',gap:5,
+          boxShadow:`inset 8px 0 24px ${aiChar.color}18`}}>
+          <div style={{position:'relative'}}>
+            <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',
+              border:`3px solid ${aiChar.color}`,
+              boxShadow:`0 0 20px ${aiChar.color}aa, 0 0 40px ${aiChar.color}44`,
+              background:aiChar.color,
+              animation:phase==='ai'?'charPulse 1.8s ease infinite':'none'}}>
+              <CharFace charId={aiChar.id} size={64}/>
+            </div>
+            {phase==='ai'&&(
+              <div style={{position:'absolute',top:2,right:2,width:12,height:12,borderRadius:'50%',
+                background:'#f59e0b',border:'2px solid #0a1628',boxShadow:'0 0 8px #f59e0b'}}/>
+            )}
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:13,color:aiChar.color,letterSpacing:2,
+            textAlign:'center',lineHeight:1,textShadow:`0 0 12px ${aiChar.color}88`}}>{aiChar.name}</p>
+          <div style={{display:'flex',gap:4}}>
+            {[0,1,2,3].map(i=>(
+              <div key={i} style={{
+                width:18,height:18,borderRadius:'50%',
+                background:aPos[i]>=TOTAL?'transparent':'rgba(255,255,255,.1)',
+                border:`2px solid ${aPos[i]>=TOTAL?aiChar.color:'rgba(255,255,255,.15)'}`,
+                boxShadow:aPos[i]>=TOTAL?`0 0 10px ${aiChar.color}`:'none',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:aPos[i]>=TOTAL?13:0,
+                animation:aPos[i]>=TOTAL?'ballPip .5s cubic-bezier(.175,.885,.32,1.275)':'none',
+                transition:'all .4s'}}>
+                {aPos[i]>=TOTAL?'🏀':''}
+              </div>
+            ))}
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:26,color:'#fff',lineHeight:1,
+            textShadow:`0 0 14px ${aiChar.color}`}}>
+            {aPos.filter(p=>p>=TOTAL).length}
+            <span style={{fontSize:11,color:`${aiChar.color}88`}}>/{WIN_NEED}</span>
+          </p>
+          <div style={{background:`linear-gradient(145deg,${aiChar.color}cc,${aiChar.color}88)`,
+            borderRadius:12,padding:4,
+            boxShadow:`0 4px 16px ${aiChar.color}66, inset 0 1px 0 rgba(255,255,255,.3)`,
+            border:`2px solid ${aiChar.color}`}}>
+            <Dice3D val={aiDiceVal} rolling={aiRolling} color={aiChar.color} size={58}/>
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:10,letterSpacing:1,
+            color:aiRolling?aiChar.color:'#4a5568',
+            textShadow:aiRolling?`0 0 10px ${aiChar.color}`:'none'}}>
+            {aiRolling?'...':(aiDiceVal&&phase!=='player')?`${aiDiceVal}`:'CPU'}
+          </p>
+        </div>
+      </div>
+
+      {/* CONTROLS */}
+      <div style={{width:'100%',maxWidth:480,flexShrink:0,
+        background:'linear-gradient(180deg,#0d1830,#080e22)',
+        borderTop:'3px solid #e8242b',padding:'7px 14px 10px'}}>
+        <p style={{textAlign:'center',fontFamily:'Bangers',fontSize:11,letterSpacing:2,
+          minHeight:16,marginBottom:5,
+          color:phase==='select'?'#fbbf24':'rgba(255,255,255,.4)',
+          textShadow:phase==='select'?'0 0 12px #fbbf24':'none'}}>
+          {status}
+        </p>
+        {phase==='select'?(
+          <div style={{width:'100%',padding:'11px',
+            background:'linear-gradient(135deg,#78350f,#92400e)',
+            border:'2px solid #fbbf24',borderRadius:12,textAlign:'center',
+            boxShadow:'0 0 24px rgba(251,191,36,.45)'}}>
+            <p style={{fontFamily:'Bangers',fontSize:14,color:'#fde68a',letterSpacing:2}}>
+              &#127936; TOCA UN BAL&#211;N PARA MOVERLO
+            </p>
+          </div>
+        ):(
+          <button onClick={rollDice} disabled={phase!=='player'} className='vs-btn'
+            style={{width:'100%',padding:'13px',fontSize:17,letterSpacing:3,
+              opacity:phase==='player'?1:.35,
+              background:phase==='player'
+                ?'linear-gradient(135deg,#e8242b 0%,#ff4444 50%,#e8242b 100%)'
+                :'rgba(255,255,255,.05)',
+              border:phase==='player'?'2px solid #ff6666':'2px solid rgba(255,255,255,.07)',
+              boxShadow:phase==='player'
+                ?'0 4px 28px rgba(232,36,43,.6),0 0 50px rgba(232,36,43,.25)':'none',
+              borderRadius:14,transition:'all .2s'}}>
+            {phase==='player'?'🎲  TIRAR DADO'
+              :rolling||aiRolling?'⚡  LANZANDO...'
+              :`⏳  ${aiChar.name}...`}
+          </button>
+        )}
+        <div style={{display:'flex',gap:3,justifyContent:'center',marginTop:6,flexWrap:'wrap'}}>
+          {Object.values(SPECIALS).map(sp=>(
+            <span key={sp.label} style={{fontSize:7,color:sp.color,
+              background:`${sp.color}18`,border:`1px solid ${sp.color}33`,
+              borderRadius:4,padding:'2px 5px',fontFamily:'Bangers',letterSpacing:.5}}>
+              {sp.emoji} {sp.text}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* SCORE CELEBRATION OVERLAY */}
+      {celebAnim&&(
+        <div style={{position:'fixed',inset:0,zIndex:180,pointerEvents:'none',
+          animation:'celebOverlay 2s ease forwards'}}>
+          {/* Dark bg */}
+          <div style={{position:'absolute',inset:0,background:celebAnim.isPlayer
+            ?'radial-gradient(ellipse at 50% 40%,rgba(0,60,0,.85),rgba(0,0,0,.92))'
+            :'radial-gradient(ellipse at 50% 40%,rgba(60,0,0,.85),rgba(0,0,0,.92))'}}/>
+
+          {/* Ring burst 1 */}
+          <div style={{position:'absolute',top:'38%',left:'50%',width:160,height:160,
+            borderRadius:'50%',border:`4px solid ${celebAnim.color}`,
+            animation:'ringPulse 1.2s ease .1s forwards'}}/>
+          {/* Ring burst 2 */}
+          <div style={{position:'absolute',top:'38%',left:'50%',width:160,height:160,
+            borderRadius:'50%',border:`3px solid ${celebAnim.color}88`,
+            animation:'ringPulse2 1.4s ease .3s forwards'}}/>
+
+          {/* Character face bouncing */}
+          <div style={{position:'absolute',top:'30%',left:'50%',zIndex:10,
+            animation:'charCelebrate 2s cubic-bezier(.175,.885,.32,1.275) forwards'}}>
+            <div style={{width:110,height:110,borderRadius:'50%',overflow:'hidden',
+              border:`5px solid ${celebAnim.color}`,
+              boxShadow:`0 0 40px ${celebAnim.color},0 0 80px ${celebAnim.color}66`,
+              background:`radial-gradient(circle at 35% 35%,${celebAnim.color}ff,${celebAnim.color}88)`}}>
+              <CharFace charId={celebAnim.charId} size={110}/>
+            </div>
+            {/* Sparkle dots around face */}
+            {[0,60,120,180,240,300].map(deg=>(
+              <div key={deg} style={{position:'absolute',
+                top:'50%',left:'50%',
+                width:8,height:8,borderRadius:'50%',
+                background:celebAnim.color,
+                transform:`rotate(${deg}deg) translateX(70px) translate(-50%,-50%)`,
+                animation:`ringPulse .8s ease ${deg/1800}s forwards`}}/>
+            ))}
+          </div>
+
+          {/* Basketball going in */}
+          <div style={{position:'absolute',top:'55%',left:'50%',zIndex:9,
+            animation:'ballScore 2s cubic-bezier(.22,1,.36,1) forwards'}}>
+            <span style={{fontSize:44,filter:'drop-shadow(0 6px 14px rgba(0,0,0,.9))'}}>🏀</span>
+          </div>
+
+          {/* Reaction text */}
+          <div style={{position:'absolute',top:'72%',left:'50%',zIndex:11,
+            animation:'reactionText 2s ease forwards'}}>
+            <span style={{fontFamily:'Bangers',fontSize:34,letterSpacing:3,
+              color:celebAnim.color,
+              textShadow:`0 0 30px ${celebAnim.color},0 0 60px ${celebAnim.color},2px 2px 0 #000`,
+              whiteSpace:'nowrap'}}>
+              {celebAnim.text}
+            </span>
+          </div>
+
+          {/* CANASTA label */}
+          <div style={{position:'absolute',top:'83%',left:'50%',zIndex:11,
+            transform:'translate(-50%,-50%)',
+            fontFamily:'Bangers',fontSize:14,letterSpacing:4,
+            color:celebAnim.isPlayer?'#22c55e':'#ef4444',
+            textShadow:`0 0 16px ${celebAnim.isPlayer?'#22c55e':'#ef4444'}`}}>
+            {celebAnim.isPlayer?'¡CANASTA!':'CPU ANOTA'}
+          </div>
+        </div>
+      )}
+
+      {/* GAME OVER */}
+      {gameOver&&(
+        <div style={{position:'fixed',inset:0,
+          background:'radial-gradient(ellipse at 50% 30%,rgba(20,0,10,.97),rgba(4,0,8,1))',
+          zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',
+          flexDirection:'column',gap:10,padding:20}}>
+          <div style={{position:'absolute',inset:0,
+            border:`10px solid ${gameOver==='player'?'#22c55e':'#e8242b'}`,pointerEvents:'none'}}/>
+          <p style={{fontFamily:'Bangers',fontSize:11,color:'#555',letterSpacing:5,position:'relative'}}>
+            SLAM DUNK &#183; GAME OVER
+          </p>
+          <div style={{fontSize:64,animation:'zoomIn .4s cubic-bezier(.175,.885,.32,1.275)',position:'relative'}}>
+            {gameOver==='player'?'🏆':'😡'}
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:54,letterSpacing:3,textAlign:'center',
+            color:gameOver==='player'?'#22c55e':'#e8242b',
+            textShadow:`0 0 40px ${gameOver==='player'?'#22c55e':'#e8242b'}, 3px 3px 0 #000`,
+            animation:'zoomIn .5s ease',position:'relative'}}>
+            {gameOver==='player'?'¡GANASTE!':'CPU GANÓ'}
+          </p>
+          <div style={{display:'flex',gap:20,alignItems:'center',position:'relative'}}>
+            <div style={{textAlign:'center'}}>
+              <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',
+                border:`4px solid ${char.color}`,margin:'0 auto 4px',boxShadow:`0 0 24px ${char.color}`}}>
+                <CharFace charId={char.id} size={64}/>
+              </div>
+              <p style={{fontFamily:'Bangers',fontSize:12,color:char.color}}>{char.name}</p>
+              <p style={{fontFamily:'Bangers',fontSize:22,color:'#fff'}}>
+                {pPos.filter(p=>p>=TOTAL).length}
+                <span style={{fontSize:10,color:'#555'}}>/{WIN_NEED}</span>
+              </p>
+            </div>
+            <p style={{fontFamily:'Bangers',fontSize:26,color:'#333'}}>VS</p>
+            <div style={{textAlign:'center'}}>
+              <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',
+                border:`4px solid ${aiChar.color}`,margin:'0 auto 4px',boxShadow:`0 0 24px ${aiChar.color}`}}>
+                <CharFace charId={aiChar.id} size={64}/>
+              </div>
+              <p style={{fontFamily:'Bangers',fontSize:12,color:aiChar.color}}>{aiChar.name}</p>
+              <p style={{fontFamily:'Bangers',fontSize:22,color:'#fff'}}>
+                {aPos.filter(p=>p>=TOTAL).length}
+                <span style={{fontSize:10,color:'#555'}}>/{WIN_NEED}</span>
+              </p>
+            </div>
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:13,color:'#718096',letterSpacing:2,
+            marginTop:4,position:'relative'}}>¿QUÉ HACEMOS?</p>
+          <button onClick={()=>{setAiIdx(i=>i+1);resetGame();}} className='vs-btn'
+            style={{padding:'13px',fontSize:16,width:'100%',maxWidth:300,
+              background:'linear-gradient(135deg,#e8242b,#ff5544)',position:'relative'}}>
+            ⚔️ SIGUIENTE RIVAL
+          </button>
+          <button onClick={resetGame}
+            style={{color:'#f6ad55',background:'rgba(246,173,85,.08)',border:'1px solid rgba(246,173,85,.3)',
+              cursor:'pointer',fontFamily:'Bangers',fontSize:13,letterSpacing:1,position:'relative',
+              borderRadius:8,padding:'8px 20px'}}>
+            &#128260; REVANCHA
+          </button>
+          <button onClick={()=>{resetGame();onBack();}}
+            style={{color:'#4a5568',background:'transparent',border:'none',cursor:'pointer',
+              fontFamily:'Bangers',fontSize:11,letterSpacing:1,position:'relative'}}>
+            &#8592; SALIR
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+function App() {
+  const [charA, setCharA] = useState(CHARS.find(c=>c.id==='sakuragi'));
+  const [charB, setCharB] = useState(CHARS.find(c=>c.id==='rukawa'));
+  const [appMode, setAppMode] = useState('vs');
+  const [charStats, setCharStats] = useState(
+    () => Object.fromEntries(CHARS.map(c => [c.id, {...c.stats}]))
+  );
+
+  const handleGameResult = (charId, result) => {
+    const delta = result === 'player' ? 3 : -2;
+    setCharStats(prev => {
+      const s = {...prev[charId]};
+      STAT_KEYS.forEach(k => { s[k] = Math.max(1, Math.min(100, s[k] + delta)); });
+      return {...prev, [charId]: s};
+    });
+  };
+
+  const getLevel = charId =>
+    Math.round(STAT_KEYS.reduce((a,k) => a + charStats[charId][k], 0) / STAT_KEYS.length);
+
+  return (
+    <div style={{minHeight:'100vh',position:'relative',zIndex:1}}>
+      {/* Header */}
+      <div style={{textAlign:'center',padding:'22px 16px 14px',borderBottom:'1px solid rgba(255,255,255,.05)'}}>
+        <h1 className="tf" style={{fontSize:42,background:'linear-gradient(135deg,#f6ad55,#fc8181,#9f7aea)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+          🏀 SLAM DUNK VS
+        </h1>
+        <p style={{fontSize:11,color:'#4a5568',letterSpacing:2,marginTop:4}}>EQUIPO SHOHOKU &#183; ELIGE TUS JUGADORES &#183; JUEGA UN PARTIDO</p>
+      </div>
+
+      {appMode==='race'&&(
+        <RaceMode
+          onBack={()=>setAppMode('vs')}
+          charStats={charStats}
+          onResult={handleGameResult}
+          selectedChar={charA}
+        />
+      )}
+
+      <div style={{maxWidth:540,margin:'0 auto',padding:14}}>
+
+        {/* CHARACTER GRID */}
+        <div className="card" style={{padding:14,marginBottom:14}}>
+          <p style={{fontSize:10,fontWeight:700,color:'#4a5568',letterSpacing:1,
+            textTransform:'uppercase',marginBottom:10}}>Elige dos jugadores</p>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
+            {CHARS.map(c=>(
+              <CharMini key={c.id} char={c}
+                selected={charA?.id===c.id||charB?.id===c.id}
+                onSelect={c2=>{
+                  if(charA?.id===c2.id){ setCharA(null); return; }
+                  if(charB?.id===c2.id){ setCharB(null); return; }
+                  if(!charA){ setCharA(c2); } else { setCharB(c2); }
+                }}
+              />
+            ))}
+          </div>
+          {(!charA||!charB)&&(
+            <p style={{textAlign:'center',fontSize:11,color:'#4a5568',marginTop:10}}>
+              {!charA&&!charB?'Elige dos jugadores'
+                :!charA?'Falta el primer jugador'
+                :'Falta el segundo jugador'}
+            </p>
+          )}
+        </div>
+
+        {/* FIGHTER CARDS */}
+        <div style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:14}}>
+          <BigCharCard char={charA} side="A"
+            level={charA?getLevel(charA.id):null}
+            stats={charA?charStats[charA.id]:null}/>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',
+            gap:4,flexShrink:0,paddingTop:18}}>
+            <span className="tf" style={{fontSize:26,
+              background:'linear-gradient(135deg,#f6ad55,#fc8181)',
+              WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>VS</span>
+          </div>
+          <BigCharCard char={charB} side="B"
+            level={charB?getLevel(charB.id):null}
+            stats={charB?charStats[charB.id]:null}/>
+        </div>
+
+        {/* ACTION BUTTON */}
+        <button className="vs-btn"
+          style={{width:'100%',padding:'16px',
+            background: charA&&charB
+              ?'linear-gradient(135deg,#744210,#92400e,#744210)'
+              :'rgba(255,255,255,.04)',
+            border: charA&&charB?'2px solid #d97706':'2px solid rgba(255,255,255,.06)',
+            boxShadow: charA&&charB?'0 4px 28px rgba(180,83,9,.5)':'none',
+            borderRadius:16,transition:'all .2s'}}
+          onClick={()=>{ if(charA&&charB) setAppMode('race'); }}
+          disabled={!charA||!charB}>
+          {charA&&charB?'🏀 JUGAR PARTIDO':'🏀 SELECCIONA 2 JUGADORES'}
+        </button>
+        {charA&&charB&&(
+          <p style={{textAlign:'center',fontSize:10,color:'#2d3748',marginTop:8}}>
+            Ganar &#43;3 stats &#183; Perder &#8722;2 stats &#183; Debes llegar exacto a la meta
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
