@@ -7,6 +7,58 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+  import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-analytics.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7cxO7kGF9dhx58FRIjfnDuvySq0pNWKU",
+    authDomain: "animevs-6e4db.firebaseapp.com",
+    projectId: "animevs-6e4db",
+    storageBucket: "animevs-6e4db.firebasestorage.app",
+    messagingSenderId: "1035693287339",
+    appId: "1:1035693287339:web:3c1e8c58946bad6b3dd4ee",
+    measurementId: "G-0C9BVGE7PW"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getFirestore(app);
+
+  // Registrar visita
+  logEvent(analytics, 'page_view');
+
+  // API global para el juego
+  window.firebaseDB = db;
+  window.firebaseAnalytics = analytics;
+  window.firebaseLogEvent = logEvent;
+
+  // Guardar/actualizar jugador en Firestore
+  window.savePlayerToFirebase = async (alias, wins, losses, rp, favChar) => {
+    if (!alias || alias === 'Jugador') return;
+    try {
+      const ref = doc(db, 'ranking', alias);
+      const snap = await getDoc(ref);
+      // Solo actualiza si los datos son mejores o es nuevo
+      await setDoc(ref, {
+        alias, wins, losses, rp, favChar,
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch(e) { console.warn('Firebase write error:', e); }
+  };
+
+  // Obtener top 10 del ranking global
+  window.getGlobalRanking = async () => {
+    try {
+      const q = query(collection(db, 'ranking'), orderBy('rp', 'desc'), limit(10));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => d.data());
+    } catch(e) { console.warn('Firebase read error:', e); return []; }
+  };
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700;800&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -717,7 +769,7 @@ const rollWithMod = mod => {
   return pool ? pool[Math.floor(Math.random()*pool.length)] : Math.ceil(Math.random()*6);
 };
 
-function RaceMode({ onBack, charStats={}, onResult, selectedChar, diceModifier=null, fixedAiChar=null }) {
+function RaceMode({ onBack, charStats={}, onResult, selectedChar, diceModifier=null, fixedAiChar=null, playerRP=0 }) {
   const TOTAL     = 21;
   const WIN_NEED  = 2;  // pieces needed to win
   const SPECIALS  = {
@@ -870,7 +922,12 @@ function RaceMode({ onBack, charStats={}, onResult, selectedChar, diceModifier=n
     setAiRolling(true);
     const iv2 = setInterval(() => setAiDiceVal(Math.ceil(Math.random()*6)), 65);
     await D(850); clearInterval(iv2); setAiRolling(false);
-    const roll = Math.ceil(Math.random()*6);
+    // Dificultad suave: a más RP del jugador, leve chance de que IA saque el mejor de 2 dados
+    // Máximo 15% de ventaja (a 500+ RP). Siempre el jugador puede ganar.
+    const diffBonus = Math.min(playerRP / 500, 0.15);
+    const r1 = Math.ceil(Math.random()*6);
+    const r2 = Math.ceil(Math.random()*6);
+    const roll = Math.random() < diffBonus ? Math.max(r1,r2) : r1;
     setAiDiceVal(roll);
     setStatus(`${aiChar.name} saca ${roll}`);
     await D(480);
@@ -1681,6 +1738,7 @@ function CampaignMode({ onBack, charStats={}, onUpdateStats }) {
       diceModifier={diceModifier}
       onBack={()=>setPhase('pre_round')}
       charStats={charStats}
+      playerRP={parseInt(localStorage.getItem('animevs_rp')||'0')}
       onResult={(_,result)=>{
         const earned = result==='player' ? 150 : 30;
         saveCoins(coins+earned);
@@ -1821,6 +1879,270 @@ function CampaignMode({ onBack, charStats={}, onUpdateStats }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+function RankingScreen({ onBack, playerAlias }) {
+  const wins    = parseInt(localStorage.getItem('animevs_wins')||'0');
+  const losses  = parseInt(localStorage.getItem('animevs_losses')||'0');
+  const coins   = parseInt(localStorage.getItem('animevs_coins')||'0');
+  const rp      = parseInt(localStorage.getItem('animevs_rp')||'0');
+  const total   = wins + losses;
+  const pct     = total > 0 ? Math.round(wins/total*100) : 0;
+  const favChar = localStorage.getItem('animevs_fav_char') || 'sakuragi';
+  const favData = CHARS.find(c=>c.id===favChar) || CHARS[0];
+  const playerLevel = Math.floor(rp / 30) + 1;
+  const [globalRanking, setGlobalRanking] = useState([]);
+  const [loadingRanking, setLoadingRanking] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      if (window.getGlobalRanking) {
+        const data = await window.getGlobalRanking();
+        setGlobalRanking(data);
+      }
+      setLoadingRanking(false);
+    };
+    load();
+  }, []);
+
+  const myPos = globalRanking.length > 0
+    ? globalRanking.findIndex(p => p.alias === playerAlias) + 1 || globalRanking.length + 1
+    : '—';
+
+  const medalColor = pos => pos===1?'#fbbf24':pos===2?'#94a3b8':'#b45309';
+  const medalEmoji = pos => pos===1?'🥇':pos===2?'🥈':'🥉';
+
+  const ROW = ({pos, name, wins:w, pct:p, char, isMe=false}) => (
+    <div style={{
+      display:'flex',alignItems:'center',gap:12,
+      padding:'11px 14px',
+      background: isMe
+        ? 'linear-gradient(90deg,rgba(251,191,36,.18),rgba(251,191,36,.08))'
+        : pos%2===0 ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.06)',
+      borderRadius:12,
+      border: isMe ? '1.5px solid rgba(251,191,36,.5)' : '1px solid rgba(255,255,255,.06)',
+      marginBottom:6,
+    }}>
+      {/* Posición */}
+      <div style={{width:30,textAlign:'center',flexShrink:0}}>
+        {pos<=3
+          ? <span style={{fontSize:20}}>{medalEmoji(pos)}</span>
+          : <span style={{fontFamily:'Bangers,cursive',fontSize:17,
+              color: isMe?'#fbbf24':'rgba(255,255,255,.5)'}}>{pos}</span>
+        }
+      </div>
+      {/* Avatar */}
+      <div style={{width:38,height:38,borderRadius:'50%',overflow:'hidden',flexShrink:0,
+        border:`2px solid ${isMe?'#fbbf24':(CHARS.find(c=>c.id===char)||CHARS[0]).color}`,
+        background:'#111'}}>
+        <CharFace charId={char} size={38}/>
+      </div>
+      {/* Nombre */}
+      <div style={{flex:1,minWidth:0}}>
+        <p style={{fontFamily:'Bangers,cursive',fontSize:16,letterSpacing:1,
+          color: isMe?'#fbbf24':'#fff',margin:0,
+          textShadow: isMe?'0 0 10px rgba(251,191,36,.6)':'none',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          {name}{isMe&&<span style={{fontSize:10,color:'rgba(251,191,36,.7)',marginLeft:6}}>← TÚ</span>}
+        </p>
+        <p style={{fontSize:10,color:'rgba(255,255,255,.4)',margin:0,letterSpacing:.5}}>
+          {(CHARS.find(c=>c.id===char)||CHARS[0]).name} · {p}% victorias
+        </p>
+      </div>
+      {/* Victorias */}
+      <div style={{textAlign:'right',flexShrink:0}}>
+        <p style={{fontFamily:'Bangers,cursive',fontSize:18,
+          color: isMe?'#fbbf24':'#4ade80',margin:0,
+          textShadow: isMe?'0 0 8px rgba(251,191,36,.5)':'none'}}>
+          {w} <span style={{fontSize:10,color:'rgba(255,255,255,.4)'}}>W</span>
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{minHeight:'100vh',background:'linear-gradient(180deg,#0a0818 0%,#130f2a 100%)',
+      paddingBottom:40}}>
+
+      {/* Header */}
+      <div style={{
+        background:'linear-gradient(135deg,#c47d00,#e8a000,#c47d00)',
+        padding:'16px 16px 14px',textAlign:'center',position:'relative',
+        boxShadow:'0 4px 24px rgba(200,120,0,.4)'}}>
+        <button onClick={onBack}
+          style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',
+            background:'rgba(0,0,0,.25)',border:'2px solid rgba(255,255,255,.3)',
+            color:'#fff',borderRadius:20,width:34,height:34,cursor:'pointer',
+            fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          ←
+        </button>
+        <h2 style={{fontFamily:'Bangers,cursive',fontSize:26,color:'#fff',
+          letterSpacing:3,margin:0,textShadow:'0 2px 8px rgba(0,0,0,.4)'}}>
+          🏆 TABLA DE CLASIFICACIÓN
+        </h2>
+      </div>
+
+      <div style={{maxWidth:480,margin:'0 auto',padding:'16px 14px'}}>
+
+        {/* Tu récord rápido */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
+          {[
+            {label:'NIVEL',     val:'Nv'+playerLevel, color:'#a78bfa', icon:'⭐'},
+            {label:'RP',        val:rp,    color:'#fbbf24', icon:'🏅'},
+            {label:'VICTORIAS', val:wins,  color:'#4ade80', icon:'🏆'},
+            {label:'% GANADAS', val:pct+'%', color:'#60a5fa', icon:'📊'},
+          ].map(s=>(
+            <div key={s.label} style={{background:'rgba(255,255,255,.06)',
+              border:'1px solid rgba(255,255,255,.1)',borderRadius:12,
+              padding:'10px 6px',textAlign:'center'}}>
+              <p style={{fontSize:16,margin:0}}>{s.icon}</p>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:20,color:s.color,
+                margin:'2px 0 0',textShadow:`0 0 10px ${s.color}88`}}>{s.val}</p>
+              <p style={{fontSize:8,color:'rgba(255,255,255,.35)',letterSpacing:.5}}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Cabecera tabla */}
+        <div style={{display:'flex',padding:'6px 14px',marginBottom:4}}>
+          <span style={{width:30,fontSize:10,color:'rgba(255,255,255,.35)',textAlign:'center'}}>#</span>
+          <span style={{width:38,marginLeft:12}}/>
+          <span style={{flex:1,fontSize:10,color:'rgba(255,255,255,.35)',marginLeft:12,letterSpacing:1}}>JUGADOR</span>
+          <span style={{fontSize:10,color:'rgba(255,255,255,.35)',letterSpacing:1}}>WINS</span>
+        </div>
+
+        {/* Lista global */}
+        {loadingRanking ? (
+          <div style={{textAlign:'center',padding:'30px',color:'rgba(255,255,255,.4)',
+            fontFamily:'Bangers,cursive',letterSpacing:2,fontSize:14}}>
+            ⏳ CARGANDO RANKING...
+          </div>
+        ) : globalRanking.length === 0 ? (
+          <div style={{textAlign:'center',padding:'24px',color:'rgba(255,255,255,.3)',fontSize:12}}>
+            Aún no hay jugadores en el ranking global.<br/>
+            <span style={{color:'#fbbf24'}}>¡Sé el primero en jugar!</span>
+          </div>
+        ) : (
+          globalRanking.map((p,i) => {
+            const isMe = p.alias === playerAlias;
+            const t = (p.wins||0)+(p.losses||0);
+            const pc = t>0?Math.round((p.wins||0)/t*100):0;
+            return <ROW key={p.alias} pos={i+1} name={p.alias}
+              wins={p.wins||0} pct={pc} char={p.favChar||'sakuragi'} isMe={isMe}/>;
+          })
+        )}
+
+        {/* Separador si el jugador no está en top 10 */}
+        {!loadingRanking && globalRanking.length>0 && !globalRanking.find(p=>p.alias===playerAlias) && (<>
+          <div style={{display:'flex',alignItems:'center',gap:8,margin:'12px 0'}}>
+            <div style={{flex:1,height:1,background:'rgba(255,255,255,.1)'}}/>
+            <span style={{fontSize:11,color:'rgba(255,255,255,.3)'}}>···</span>
+            <div style={{flex:1,height:1,background:'rgba(255,255,255,.1)'}}/>
+          </div>
+          <ROW pos={globalRanking.length+1} name={playerAlias||'Tú'}
+            wins={wins} pct={pct} char={favData.id} isMe={true}/>
+        </>)}
+
+      </div>
+    </div>
+  );
+}
+
+const BAD_WORDS = [
+  'puta','puto','mierda','culo','pene','vagina','concha','cono','joder',
+  'cabron','pendejo','pendeja','marica','maricon','idiota','estupido',
+  'gilipollas','hdp','forro','pelotudo','boludo','imbecil','perra','pito',
+  'verga','culero','chinga','pinche','huevon','fuck','shit','bitch','cunt',
+  'dick','cock','pussy','nigger','nigga','fag','whore','slut','twat','wank',
+];
+
+function containsBadWord(str) {
+  const clean = s => s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'');
+  const s = clean(str);
+  return BAD_WORDS.some(w => s.includes(clean(w)));
+}
+
+function NicknameModal({ onSave, onSkip, canSkip=true, currentAlias='' }) {
+  const [nick, setNick] = React.useState(currentAlias);
+  const trimmed = nick.trim();
+  const isBad = trimmed.length >= 2 && containsBadWord(trimmed);
+  const valid = trimmed.length >= 2 && !isBad;
+
+  const handleSave = () => { if (valid) onSave(trimmed); };
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:9999,
+      background:'rgba(0,0,0,.85)',backdropFilter:'blur(6px)',
+      display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{background:'linear-gradient(145deg,#1a1a2e,#16213e)',
+        border:'2px solid rgba(255,165,0,.4)',borderRadius:20,
+        padding:'32px 28px',width:'100%',maxWidth:360,
+        boxShadow:'0 0 60px rgba(255,120,0,.25)',textAlign:'center',
+        position:'relative'}}>
+        {/* Botón cerrar */}
+        <button onClick={onSkip}
+          style={{position:'absolute',top:12,right:14,background:'none',border:'none',
+            color:'rgba(255,255,255,.35)',fontSize:22,cursor:'pointer',lineHeight:1,
+            padding:4}}>✕</button>
+        <div style={{fontSize:48,marginBottom:8}}>🏀</div>
+        <h2 className="tf" style={{fontSize:28,
+          background:'linear-gradient(135deg,#f6ad55,#fc8181)',
+          WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
+          marginBottom:4}}>SLAM DUNK VS</h2>
+        <p style={{color:'#fff',fontSize:16,fontWeight:700,marginBottom:4,letterSpacing:1}}>
+          INGRESA TU NOMBRE
+        </p>
+        <p style={{color:'rgba(255,255,255,.5)',fontSize:12,marginBottom:24,letterSpacing:1}}>
+          para ingresar al ranking Slam Dunk
+        </p>
+        <input
+          autoFocus
+          maxLength={16}
+          placeholder="Tu nombre..."
+          value={nick}
+          onChange={e=>setNick(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&valid&&handleSave()}
+          style={{width:'100%',padding:'12px 16px',borderRadius:10,
+            border:`2px solid ${isBad?'#f87171':'rgba(255,165,0,.5)'}`,
+            background:'rgba(255,255,255,.07)',
+            color:'#fff',fontSize:18,textAlign:'center',
+            fontFamily:'Bangers,cursive',letterSpacing:2,
+            outline:'none',boxSizing:'border-box',marginBottom:isBad?6:12}}/>
+        {isBad&&(
+          <p style={{color:'#f87171',fontSize:12,marginBottom:10,letterSpacing:.5}}>
+            ❌ Ese nombre no está permitido
+          </p>
+        )}
+        <button
+          disabled={!valid}
+          onClick={handleSave}
+          style={{width:'100%',padding:'14px',borderRadius:12,
+            background: valid
+              ? 'linear-gradient(135deg,#e8242b 0%,#ff4444 50%,#e8242b 100%)'
+              : 'rgba(255,255,255,.06)',
+            border: valid ? '2px solid #ff6666' : '2px solid rgba(255,255,255,.1)',
+            cursor:valid?'pointer':'default',
+            color:valid?'#fff':'rgba(255,255,255,.25)',
+            fontFamily:'Bangers,cursive',fontSize:22,letterSpacing:4,
+            boxShadow:valid?'0 4px 28px rgba(232,36,43,.6),0 0 50px rgba(232,36,43,.2)':'none',
+            transition:'all .2s',marginBottom:10}}>
+          ¡A JUGAR!
+        </button>
+        {canSkip&&(
+          <button onClick={onSkip}
+            style={{width:'100%',padding:'12px',borderRadius:10,
+              background:'linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.04))',
+              border:'2px solid rgba(255,255,255,.2)',
+              color:'rgba(255,255,255,.6)',cursor:'pointer',
+              fontFamily:'Bangers,cursive',fontSize:15,letterSpacing:2,
+              boxShadow:'0 2px 10px rgba(0,0,0,.3)'}}>
+            CONTINUAR SIN NOMBRE
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [charA, setCharA] = useState(CHARS.find(c=>c.id==='sakuragi'));
   const [charB, setCharB] = useState(CHARS.find(c=>c.id==='rukawa'));
@@ -1828,18 +2150,48 @@ function App() {
   const [charStats, setCharStats] = useState(
     () => Object.fromEntries(CHARS.map(c => [c.id, {...c.stats}]))
   );
+  const [playerAlias, setPlayerAlias] = useState(
+    () => localStorage.getItem('animevs_alias') || ''
+  );
+  const [changingAlias, setChangingAlias] = useState(false);
+
+  const saveAlias = (name) => {
+    localStorage.setItem('animevs_alias', name);
+    setPlayerAlias(name);
+    setChangingAlias(false);
+  };
 
   const handleGameResult = (charId, result) => {
-    const delta = result === 'player' ? 3 : -2;
+    const isWin = result === 'player';
+    // Stats del personaje
+    const delta = isWin ? 3 : -2;
     setCharStats(prev => {
       const s = {...prev[charId]};
       STAT_KEYS.forEach(k => { s[k] = Math.max(1, Math.min(100, s[k] + delta)); });
       return {...prev, [charId]: s};
     });
-    // Ganar monedas en Jugar Partido también
-    const earned = result === 'player' ? 100 : 20;
-    const prev = parseInt(localStorage.getItem('animevs_coins')||'0');
-    localStorage.setItem('animevs_coins', String(prev + earned));
+    // Monedas
+    const earned = isWin ? 100 : 20;
+    const prevCoins = parseInt(localStorage.getItem('animevs_coins')||'0');
+    localStorage.setItem('animevs_coins', String(prevCoins + earned));
+    // Victorias / derrotas
+    const prevW = parseInt(localStorage.getItem('animevs_wins')||'0');
+    const prevL = parseInt(localStorage.getItem('animevs_losses')||'0');
+    if (isWin) localStorage.setItem('animevs_wins', String(prevW+1));
+    else        localStorage.setItem('animevs_losses', String(prevL+1));
+    // Ranking Points: +15 por victoria, -8 por derrota (mín 0)
+    const prevRP = parseInt(localStorage.getItem('animevs_rp')||'0');
+    const newRP  = Math.max(0, prevRP + (isWin ? 15 : -8));
+    localStorage.setItem('animevs_rp', String(newRP));
+    // Personaje favorito
+    localStorage.setItem('animevs_fav_char', charId);
+    // Guardar en Firebase
+    const alias = localStorage.getItem('animevs_alias');
+    const newW = parseInt(localStorage.getItem('animevs_wins')||'0');
+    const newL = parseInt(localStorage.getItem('animevs_losses')||'0');
+    if (window.savePlayerToFirebase) {
+      window.savePlayerToFirebase(alias, newW, newL, newRP, charId);
+    }
   };
 
   const getLevel = charId =>
@@ -1847,12 +2199,29 @@ function App() {
 
   return (
     <div style={{minHeight:'100vh',position:'relative',zIndex:1}}>
+      {(!playerAlias||changingAlias) && (
+        <NicknameModal
+          onSave={saveAlias}
+          onSkip={changingAlias ? ()=>setChangingAlias(false) : ()=>saveAlias('Jugador')}
+          canSkip={!changingAlias}
+          currentAlias={changingAlias ? playerAlias : ''}
+        />
+      )}
       {/* Header */}
       <div style={{textAlign:'center',padding:'22px 16px 14px',borderBottom:'1px solid rgba(255,255,255,.05)'}}>
         <h1 className="tf app-title" style={{fontSize:42,background:'linear-gradient(135deg,#f6ad55,#fc8181,#9f7aea)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
           🏀 SLAM DUNK VS
         </h1>
         <p className="app-subtitle" style={{fontSize:12,color:'#cbd5e1',letterSpacing:2,marginTop:4}}>EQUIPO SHOHOKU &#183; ELIGE TUS JUGADORES &#183; JUEGA UN PARTIDO</p>
+        {playerAlias&&(
+          <p style={{fontSize:11,color:'#f6ad55',marginTop:4,letterSpacing:1}}>
+            👤 {playerAlias}
+            <span onClick={()=>setChangingAlias(true)}
+              style={{marginLeft:8,color:'rgba(255,255,255,.3)',cursor:'pointer',fontSize:10}}>
+              cambiar
+            </span>
+          </p>
+        )}
       </div>
 
       {appMode==='race'&&(
@@ -1862,6 +2231,7 @@ function App() {
           onResult={handleGameResult}
           selectedChar={charA}
           fixedAiChar={charB}
+          playerRP={parseInt(localStorage.getItem('animevs_rp')||'0')}
         />
       )}
       {appMode==='campaign'&&(
@@ -1870,6 +2240,9 @@ function App() {
           charStats={charStats}
           onUpdateStats={handleGameResult}
         />
+      )}
+      {appMode==='ranking'&&(
+        <RankingScreen onBack={()=>setAppMode('vs')} playerAlias={playerAlias}/>
       )}
 
       <div style={{maxWidth:540,margin:'0 auto',padding:14}}>
@@ -1973,7 +2346,22 @@ function App() {
             </p>
           </div>
 
-        </div>
+        </div>{/* end action buttons flex */}
+
+        {/* RANKING BUTTON */}
+        <button onClick={()=>setAppMode('ranking')}
+          style={{width:'100%',marginTop:10,padding:'13px',borderRadius:14,cursor:'pointer',
+            background:'linear-gradient(135deg,#1a0a3e,#2d1b69)',
+            border:'2px solid rgba(251,191,36,.5)',
+            boxShadow:'0 0 0 1px rgba(251,191,36,.15),0 4px 24px rgba(251,191,36,.2)',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:10,
+            transition:'all .2s'}}>
+          <span style={{fontSize:20}}>🏆</span>
+          <span style={{fontFamily:'Bangers,cursive',fontSize:18,letterSpacing:3,color:'#fbbf24',
+            textShadow:'0 0 12px rgba(251,191,36,.6)'}}>VER RANKING</span>
+          <span style={{fontSize:20}}>🏆</span>
+        </button>
+
       </div>
     </div>
   );
