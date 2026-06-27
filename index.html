@@ -55,7 +55,14 @@
     try {
       const q = query(collection(db, 'ranking'), orderBy('wins', 'desc'), limit(10));
       const snap = await getDocs(q);
-      return snap.docs.map(d => d.data());
+      const data = snap.docs.map(d => d.data());
+      // Desempate por % de victorias cuando wins son iguales
+      return data.sort((a, b) => {
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        const pctA = a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0;
+        const pctB = b.wins + b.losses > 0 ? b.wins / (b.wins + b.losses) : 0;
+        return pctB - pctA;
+      });
     } catch(e) { console.warn('Firebase read error:', e); return []; }
   };
 
@@ -781,7 +788,7 @@ const rollWithMod = mod => {
   return pool ? pool[Math.floor(Math.random()*pool.length)] : Math.ceil(Math.random()*6);
 };
 
-function RaceMode({ onBack, charStats={}, onResult, selectedChar, diceModifier=null, fixedAiChar=null, playerRP=0 }) {
+function RaceMode({ onBack, charStats={}, onResult, selectedChar, diceModifier=null, fixedAiChar=null, playerRP=0, campaignDiff=null }) {
   const TOTAL     = 21;
   const WIN_NEED  = 2;  // pieces needed to win
   const SPECIALS  = {
@@ -955,7 +962,7 @@ function RaceMode({ onBack, charStats={}, onResult, selectedChar, diceModifier=n
     await D(900); setAiRolling(false);
     // Dificultad suave: a más RP del jugador, leve chance de que IA saque el mejor de 2 dados
     // Máximo 15% de ventaja (a 500+ RP). Siempre el jugador puede ganar.
-    const diffBonus = Math.min(playerRP / 500, 0.15);
+    const diffBonus = campaignDiff !== null ? campaignDiff : Math.min(playerRP / 500, 0.15);
     const r1 = Math.ceil(Math.random()*6);
     const r2 = Math.ceil(Math.random()*6);
     const roll = Math.random() < diffBonus ? Math.max(r1,r2) : r1;
@@ -1770,6 +1777,9 @@ function CampaignMode({ onBack, charStats={}, onUpdateStats }) {
   );
 
   // ── RACE ──────────────────────────────────────────────────────────────────
+  // Dificultad incremental: ronda 1=fácil, 2=normal, 3=difícil, 4=muy difícil
+  const CAMPAIGN_DIFF = [0, 0.06, 0.13, 0.22];
+
   if (phase === 'race') return (
     <RaceMode
       selectedChar={campChar}
@@ -1777,6 +1787,7 @@ function CampaignMode({ onBack, charStats={}, onUpdateStats }) {
       diceModifier={diceModifier}
       onBack={()=>setPhase('pre_round')}
       charStats={charStats}
+      campaignDiff={CAMPAIGN_DIFF[round]}
       playerRP={parseInt(localStorage.getItem('animevs_rp')||'0')}
       onResult={(_,result)=>{
         const earned = result==='player' ? 150 : 30;
@@ -2366,7 +2377,7 @@ function App() {
             <>
               <p style={{fontSize:11,color:'#f6ad55',marginTop:4,letterSpacing:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
                 👤 {playerAlias}
-                {(wins+(parseInt(localStorage.getItem('animevs_losses')||'0')))>0&&(
+                {wins>0&&(
                   <span style={{fontSize:11,color:'#f6ad55',letterSpacing:1}}>
                     · {Math.round(wins/(wins+parseInt(localStorage.getItem('animevs_losses')||'0'))*100)}% victorias
                   </span>
