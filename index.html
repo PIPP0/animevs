@@ -12,7 +12,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
   import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-analytics.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, addDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC7cxO7kGF9dhx58FRIjfnDuvySq0pNWKU",
@@ -84,6 +84,48 @@
       });
       return true;
     } catch(e) { console.warn('Feedback error:', e); return false; }
+  };
+
+  // ─── MULTIPLAYER ROOMS ────────────────────────────────────────────────────────
+  window.createRoom = async (alias, char) => {
+    const code = Math.random().toString(36).substr(2,4).toUpperCase();
+    await setDoc(doc(db,'rooms',code), {
+      code, p1:{alias,char}, p2:null,
+      p1pos:0, p2pos:0, turn:'p1',
+      locked:false, skipP1:false, skipP2:false,
+      phase:'waiting', winner:null,
+      status:'Esperando rival...',
+      createdAt:Date.now()
+    });
+    return code;
+  };
+
+  window.joinRoom = async (code, alias, char) => {
+    const ref = doc(db,'rooms',code);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return {error:'Sala no encontrada'};
+    const data = snap.data();
+    if (data.p2) return {error:'Sala llena'};
+    if (data.phase !== 'waiting') return {error:'Partida ya en curso'};
+    await setDoc(ref, {
+      p2:{alias,char}, phase:'playing',
+      status:`¡A jugar! Turno de ${data.p1.alias}`
+    }, {merge:true});
+    return {ok:true, p1:data.p1};
+  };
+
+  window.updateRoom = async (code, data) => {
+    await setDoc(doc(db,'rooms',code), data, {merge:true});
+  };
+
+  window.listenRoom = (code, cb) => {
+    return onSnapshot(doc(db,'rooms',code), snap => {
+      if (snap.exists()) cb(snap.data());
+    });
+  };
+
+  window.deleteRoom = async (code) => {
+    try { await deleteDoc(doc(db,'rooms',code)); } catch(e) {}
   };
 
   // Auto-sync al cargar el módulo: fix para jugadores que cambiaron nombre
@@ -2336,10 +2378,547 @@ function FeedbackButton({ playerAlias }) {
   );
 }
 
+// ─── MULTIPLAYER LOBBY ────────────────────────────────────────────────────────
+function MultiplayerLobby({ onBack, playerAlias, onStartRace }) {
+  const [step, setStep]         = useState('menu');   // menu | create | join | waiting
+  const [selChar, setSelChar]   = useState(null);
+  const [roomCode, setRoomCode] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const unsubRef = useRef(null);
+
+  // Cleanup listener on unmount
+  useEffect(() => () => { if (unsubRef.current) unsubRef.current(); }, []);
+
+  const alias = playerAlias || 'Jugador';
+
+  const handleCreate = async () => {
+    if (!selChar) { setError('Elige un personaje'); return; }
+    setLoading(true); setError('');
+    const code = await window.createRoom(alias, selChar.id);
+    setRoomCode(code);
+    setStep('waiting');
+    setLoading(false);
+    // Listen for player 2 joining
+    unsubRef.current = window.listenRoom(code, data => {
+      if (data.phase === 'playing' && data.p2) {
+        if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
+        onStartRace({ code, role:'p1', myChar:selChar, oppChar:CHARS.find(c=>c.id===data.p2.char)||CHARS[1], oppAlias:data.p2.alias });
+      }
+    });
+  };
+
+  const handleJoin = async () => {
+    if (!selChar) { setError('Elige un personaje'); return; }
+    if (!joinCode.trim()) { setError('Ingresa el código de sala'); return; }
+    setLoading(true); setError('');
+    const res = await window.joinRoom(joinCode.trim().toUpperCase(), alias, selChar.id);
+    setLoading(false);
+    if (res.error) { setError(res.error); return; }
+    onStartRace({ code:joinCode.trim().toUpperCase(), role:'p2', myChar:selChar,
+      oppChar:CHARS.find(c=>c.id===res.p1.char)||CHARS[0], oppAlias:res.p1.alias });
+  };
+
+  const BtnRow = ({children, onClick, disabled, style={}}) => (
+    <button onClick={onClick} disabled={disabled} className="vs-btn"
+      style={{width:'100%',padding:'14px',fontSize:16,borderRadius:14,
+        opacity:disabled?.4:1,...style}}>{children}</button>
+  );
+
+  return (
+    <div style={{minHeight:'100vh',background:'linear-gradient(180deg,#0a0818 0%,#130f2a 100%)',
+      display:'flex',flexDirection:'column'}}>
+      {/* Header */}
+      <div style={{background:'linear-gradient(135deg,#1e3a8a,#1d4ed8)',
+        padding:'16px',textAlign:'center',position:'relative',
+        boxShadow:'0 4px 24px rgba(29,78,216,.5)'}}>
+        <button onClick={onBack}
+          style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',
+            background:'rgba(0,0,0,.3)',border:'2px solid rgba(255,255,255,.2)',
+            color:'#fff',borderRadius:20,width:34,height:34,cursor:'pointer',fontSize:16,
+            display:'flex',alignItems:'center',justifyContent:'center'}}>←</button>
+        <h2 style={{fontFamily:'Bangers,cursive',fontSize:26,color:'#fff',letterSpacing:3,margin:0,
+          textShadow:'0 2px 8px rgba(0,0,0,.4)'}}>🌐 MULTIJUGADOR</h2>
+      </div>
+
+      <div style={{maxWidth:440,margin:'0 auto',padding:20,width:'100%',flex:1}}>
+
+        {/* Character picker (always shown) */}
+        {step !== 'waiting' && (
+          <div style={{background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',
+            borderRadius:16,padding:14,marginBottom:16}}>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:14,letterSpacing:2,
+              color:'rgba(255,255,255,.5)',margin:'0 0 10px'}}>TU PERSONAJE</p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
+              {CHARS.map(c=>(
+                <div key={c.id} onClick={()=>setSelChar(c)}
+                  style={{cursor:'pointer',borderRadius:10,padding:4,textAlign:'center',
+                    background:selChar?.id===c.id?`${c.color}33`:'rgba(255,255,255,.04)',
+                    border:`2px solid ${selChar?.id===c.id?c.color:'transparent'}`,
+                    transition:'all .15s'}}>
+                  <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',margin:'0 auto 2px',
+                    border:`1.5px solid ${c.color}88`}}>
+                    <CharFace charId={c.id} size={36}/>
+                  </div>
+                  <p style={{fontFamily:'Bangers,cursive',fontSize:9,color:c.color,
+                    letterSpacing:.5,margin:0,lineHeight:1}}>{c.name.split(' ')[0]}</p>
+                </div>
+              ))}
+            </div>
+            {selChar && (
+              <p style={{textAlign:'center',fontFamily:'Bangers,cursive',fontSize:15,
+                color:selChar.color,margin:'8px 0 0',letterSpacing:1}}>
+                {selChar.name} seleccionado ✓
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* MENU step */}
+        {step==='menu' && (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <BtnRow onClick={()=>setStep('create')}
+              style={{background:'linear-gradient(135deg,#1e3a8a,#2563eb)',
+                border:'2px solid #60a5fa',boxShadow:'0 4px 20px rgba(37,99,235,.5)'}}>
+              🏠 CREAR SALA
+            </BtnRow>
+            <BtnRow onClick={()=>setStep('join')}
+              style={{background:'linear-gradient(135deg,#065f46,#059669)',
+                border:'2px solid #34d399',boxShadow:'0 4px 20px rgba(5,150,105,.5)'}}>
+              🔗 UNIRSE A SALA
+            </BtnRow>
+            <p style={{textAlign:'center',fontSize:11,color:'rgba(255,255,255,.3)',marginTop:4}}>
+              Ambos jugadores necesitan estar en la misma red o usar el código
+            </p>
+          </div>
+        )}
+
+        {/* CREATE step */}
+        {step==='create' && (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <BtnRow onClick={handleCreate} disabled={loading||!selChar}
+              style={{background:'linear-gradient(135deg,#1e3a8a,#2563eb)',
+                border:'2px solid #60a5fa',boxShadow:'0 4px 20px rgba(37,99,235,.5)'}}>
+              {loading ? '⏳ Creando...' : '🏠 CREAR SALA'}
+            </BtnRow>
+            <button onClick={()=>setStep('menu')}
+              style={{background:'none',border:'none',color:'rgba(255,255,255,.4)',
+                cursor:'pointer',fontFamily:'Bangers,cursive',fontSize:12,letterSpacing:1}}>
+              ← Volver
+            </button>
+          </div>
+        )}
+
+        {/* JOIN step */}
+        {step==='join' && (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}
+              placeholder="Código de sala (ej. AB3X)"
+              maxLength={4}
+              style={{padding:'13px',fontSize:22,fontFamily:'Bangers,cursive',
+                letterSpacing:6,textAlign:'center',background:'rgba(255,255,255,.08)',
+                border:'2px solid rgba(255,255,255,.2)',borderRadius:12,color:'#fff',
+                outline:'none',width:'100%',boxSizing:'border-box'}}/>
+            <BtnRow onClick={handleJoin} disabled={loading||!selChar||joinCode.length<4}
+              style={{background:'linear-gradient(135deg,#065f46,#059669)',
+                border:'2px solid #34d399',boxShadow:'0 4px 20px rgba(5,150,105,.5)'}}>
+              {loading ? '⏳ Uniéndose...' : '🔗 UNIRSE'}
+            </BtnRow>
+            <button onClick={()=>setStep('menu')}
+              style={{background:'none',border:'none',color:'rgba(255,255,255,.4)',
+                cursor:'pointer',fontFamily:'Bangers,cursive',fontSize:12,letterSpacing:1}}>
+              ← Volver
+            </button>
+          </div>
+        )}
+
+        {/* WAITING step */}
+        {step==='waiting' && (
+          <div style={{textAlign:'center',padding:20}}>
+            <div style={{background:'rgba(255,255,255,.06)',border:'2px solid rgba(255,255,255,.15)',
+              borderRadius:20,padding:30,marginBottom:16}}>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:13,color:'rgba(255,255,255,.4)',
+                letterSpacing:2,margin:'0 0 8px'}}>CÓDIGO DE SALA</p>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:54,letterSpacing:12,
+                color:'#60a5fa',margin:0,textShadow:'0 0 20px rgba(96,165,250,.6)'}}>
+                {roomCode}
+              </p>
+              <p style={{fontSize:11,color:'rgba(255,255,255,.35)',margin:'10px 0 0'}}>
+                Comparte este código con tu rival
+              </p>
+            </div>
+            {selChar && (
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:12}}>
+                <div style={{width:44,height:44,borderRadius:'50%',overflow:'hidden',
+                  border:`2px solid ${selChar.color}`}}>
+                  <CharFace charId={selChar.id} size={44}/>
+                </div>
+                <p style={{fontFamily:'Bangers,cursive',fontSize:16,color:selChar.color,margin:0}}>
+                  {alias}
+                </p>
+              </div>
+            )}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:'#60a5fa',
+                animation:'pulse 1s ease-in-out infinite'}}/>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:13,color:'rgba(255,255,255,.5)',
+                letterSpacing:2,margin:0}}>ESPERANDO RIVAL...</p>
+            </div>
+            <button onClick={()=>{
+              if(unsubRef.current){unsubRef.current();unsubRef.current=null;}
+              window.deleteRoom&&window.deleteRoom(roomCode);
+              setStep('menu');setRoomCode('');
+            }} style={{marginTop:20,background:'none',border:'1px solid rgba(255,255,255,.15)',
+              color:'rgba(255,255,255,.4)',cursor:'pointer',borderRadius:8,padding:'8px 16px',
+              fontFamily:'Bangers,cursive',fontSize:12,letterSpacing:1}}>
+              ✕ Cancelar
+            </button>
+          </div>
+        )}
+
+        {error && (
+          <p style={{textAlign:'center',color:'#ef4444',fontFamily:'Bangers,cursive',
+            fontSize:14,letterSpacing:1,marginTop:8}}>{error}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MULTIPLAYER RACE ─────────────────────────────────────────────────────────
+function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBack, onResult }) {
+  const TOTAL    = 21;
+  const SPECIALS = {
+    4:  { emoji:'⚡', label:'FAST BREAK', text:'+2 pasos', selfD:+2, color:'#22c55e' },
+    7:  { emoji:'🤚', label:'FOUL',       text:'-2 pasos', selfD:-2, color:'#ef4444' },
+    11: { emoji:'🏀', label:'SLAM DUNK',  text:'+4 pasos', selfD:+4, color:'#f59e0b' },
+    14: { emoji:'🛑', label:'BLOQUEO',    text:'Pierde turno', selfD:0, oppD:0, color:'#7c3aed' },
+    17: { emoji:'3️⃣', label:'TRIPLE',     text:'+3 pasos', selfD:+3, color:'#06b6d4' },
+  };
+
+  const D = ms => new Promise(res => setTimeout(res, ms));
+
+  const [room, setRoom]         = useState(null);
+  const [rolling, setRolling]   = useState(false);
+  const [diceVal, setDiceVal]   = useState(null);
+  const [popup, setPopup]       = useState(null);
+  const [localStatus, setLocalStatus] = useState('');
+  const unsubRef                = useRef(null);
+  const processingRef           = useRef(false);
+
+  const isP1 = role === 'p1';
+  const myPos   = room ? (isP1 ? room.p1pos : room.p2pos) : 0;
+  const oppPos  = room ? (isP1 ? room.p2pos : room.p1pos) : 0;
+  const mySkip  = room ? (isP1 ? room.skipP1 : room.skipP2) : false;
+  const isMyTurn = room ? (room.turn === role && !room.locked && room.phase === 'playing') : false;
+
+  useEffect(() => {
+    unsubRef.current = window.listenRoom(code, data => setRoom(data));
+    return () => { if (unsubRef.current) unsubRef.current(); };
+  }, [code]);
+
+  const rollDice = async () => {
+    if (!isMyTurn || rolling || processingRef.current) return;
+    processingRef.current = true;
+
+    // Handle skip turn (BLOQUEO)
+    if (mySkip) {
+      const skipKey = isP1 ? 'skipP1' : 'skipP2';
+      const nextTurn = isP1 ? 'p2' : 'p1';
+      const oppName = oppAlias;
+      await window.updateRoom(code, {
+        [skipKey]: false,
+        turn: nextTurn,
+        locked: false,
+        status: `🛑 ${myAlias} pierde turno. Turno de ${oppName}`
+      });
+      processingRef.current = false;
+      return;
+    }
+
+    // Lock so opponent can't roll concurrently
+    await window.updateRoom(code, { locked: true });
+
+    // Roll dice
+    const roll = Math.floor(Math.random() * 6) + 1;
+    setDiceVal(roll);
+    setRolling(true);
+    await D(900);
+    setRolling(false);
+
+    // Compute new position
+    const curPos = isP1 ? room.p1pos : room.p2pos;
+    let newPos = Math.min(TOTAL, curPos + roll);
+
+    // Apply specials
+    const sp = SPECIALS[newPos];
+    let skipSelf = false;
+    if (sp) {
+      setPopup(sp);
+      await D(1100);
+      setPopup(null);
+      if (sp.selfD) newPos = Math.max(0, Math.min(TOTAL, newPos + sp.selfD));
+      if (sp.oppD !== undefined) skipSelf = true; // BLOQUEO: quien cae pierde turno
+    }
+
+    // Win check
+    const won = newPos >= TOTAL;
+    const posKey   = isP1 ? 'p1pos' : 'p2pos';
+    const skipKey  = isP1 ? 'skipP1' : 'skipP2';
+    const nextTurn = skipSelf ? role : (isP1 ? 'p2' : 'p1');  // if skipped, opponent goes (we lose next turn)
+    const nextOppName = isP1 ? oppAlias : myAlias;
+    const nextMyName  = isP1 ? myAlias : oppAlias;
+
+    if (won) {
+      await window.updateRoom(code, {
+        [posKey]: newPos, locked: false,
+        phase: 'finished', winner: role,
+        status: `🏆 ¡${myAlias} ganó!`
+      });
+      onResult && onResult(true);
+    } else {
+      await window.updateRoom(code, {
+        [posKey]: newPos,
+        [skipKey]: skipSelf,
+        turn: skipSelf ? (isP1 ? 'p2' : 'p1') : (isP1 ? 'p2' : 'p1'),
+        locked: false,
+        status: skipSelf
+          ? `🛑 ¡BLOQUEO! ${myAlias} pierde próximo turno. Turno de ${nextOppName}`
+          : `Turno de ${nextOppName}`
+      });
+    }
+
+    processingRef.current = false;
+  };
+
+  if (!room) return (
+    <div style={{minHeight:'100vh',background:'#0a0818',display:'flex',
+      alignItems:'center',justifyContent:'center'}}>
+      <p style={{fontFamily:'Bangers,cursive',fontSize:18,color:'rgba(255,255,255,.4)',
+        letterSpacing:3}}>⏳ CONECTANDO...</p>
+    </div>
+  );
+
+  const TC   = TOTAL - 1;
+  const CELL = 75 / TC;
+  const posY = pos => pos === 0 ? 94 : 13 + (TC - pos + 0.5) * CELL;
+
+  const finished  = room.phase === 'finished';
+  const iWon      = finished && room.winner === role;
+  const char      = myChar  || CHARS[0];
+  const opp       = oppChar || CHARS[1];
+  const statusMsg = room.status || '';
+
+  return (
+    <div style={{minHeight:'100vh',background:'linear-gradient(180deg,#0a0818 0%,#130f2a 100%)',
+      display:'flex',flexDirection:'column'}}>
+
+      {/* Header */}
+      <div style={{background:'linear-gradient(135deg,#1e3a8a,#1d4ed8)',
+        padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',
+        boxShadow:'0 4px 20px rgba(29,78,216,.4)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:32,height:32,borderRadius:'50%',overflow:'hidden',
+            border:`2px solid ${char.color}`}}>
+            <CharFace charId={char.id} size={32}/>
+          </div>
+          <div>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:13,color:char.color,margin:0,letterSpacing:1}}>
+              {myAlias} {isMyTurn&&!finished&&'←'}
+            </p>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:18,color:'#fff',margin:0}}>
+              {myPos}<span style={{fontSize:10,color:'rgba(255,255,255,.4)'}}>/20</span>
+            </p>
+          </div>
+        </div>
+        <p style={{fontFamily:'Bangers,cursive',fontSize:20,color:'rgba(255,255,255,.3)',margin:0}}>VS</p>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexDirection:'row-reverse'}}>
+          <div style={{width:32,height:32,borderRadius:'50%',overflow:'hidden',
+            border:`2px solid ${opp.color}`}}>
+            <CharFace charId={opp.id} size={32}/>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:13,color:opp.color,margin:0,letterSpacing:1}}>
+              {oppAlias}
+            </p>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:18,color:'#fff',margin:0}}>
+              {oppPos}<span style={{fontSize:10,color:'rgba(255,255,255,.4)'}}>/20</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Status bar */}
+      <div style={{background:'rgba(0,0,0,.4)',padding:'8px 16px',textAlign:'center',
+        borderBottom:'1px solid rgba(255,255,255,.06)'}}>
+        <p style={{fontFamily:'Bangers,cursive',fontSize:13,color:'#cbd5e1',
+          letterSpacing:1,margin:0}}>{statusMsg}</p>
+      </div>
+
+      {/* Board */}
+      <div style={{flex:1,display:'flex',gap:12,padding:'16px 16px',maxWidth:440,
+        margin:'0 auto',width:'100%',boxSizing:'border-box',alignItems:'flex-start'}}>
+
+        {/* Track */}
+        <div style={{position:'relative',width:'100%',maxWidth:200,
+          height:'calc(100vw * 1.6)',maxHeight:460,
+          background:'linear-gradient(180deg,#0a0010 0%,#1a0020 100%)',
+          borderRadius:16,border:'2px solid rgba(255,255,255,.1)',overflow:'hidden',
+          margin:'0 auto',flexShrink:0}}>
+
+          {/* Special cell markers */}
+          {Object.entries(SPECIALS).map(([p,sp])=>(
+            <div key={p} style={{position:'absolute',left:0,right:0,
+              top:`${posY(parseInt(p)) - CELL/2}%`,height:`${CELL}%`,
+              background:`${sp.color}18`,borderTop:`1px solid ${sp.color}40`,
+              display:'flex',alignItems:'center',paddingLeft:6}}>
+              <span style={{fontSize:11}}>{sp.emoji}</span>
+              <span style={{fontFamily:'Bangers,cursive',fontSize:8,color:sp.color,
+                letterSpacing:.5,marginLeft:3}}>{sp.label}</span>
+            </div>
+          ))}
+
+          {/* Finish line */}
+          <div style={{position:'absolute',top:'10%',left:0,right:0,height:3,
+            background:'repeating-linear-gradient(90deg,#fff 0,#fff 8px,transparent 8px,transparent 16px)',
+            opacity:.6}}/>
+          <div style={{position:'absolute',top:'6%',left:0,right:0,textAlign:'center'}}>
+            <span style={{fontFamily:'Bangers,cursive',fontSize:10,color:'rgba(255,255,255,.5)',
+              letterSpacing:2}}>🏁 META</span>
+          </div>
+
+          {/* My piece */}
+          <div style={{position:'absolute',left:'25%',transform:'translateX(-50%)',
+            top:`${posY(myPos)}%`,transition:'top .25s ease',
+            width:28,height:28,borderRadius:'50%',overflow:'hidden',
+            border:`3px solid ${char.color}`,
+            boxShadow:`0 0 12px ${char.color}88`,
+            zIndex:10}}>
+            <CharFace charId={char.id} size={28}/>
+          </div>
+
+          {/* Opponent piece */}
+          <div style={{position:'absolute',left:'75%',transform:'translateX(-50%)',
+            top:`${posY(oppPos)}%`,transition:'top .25s ease',
+            width:28,height:28,borderRadius:'50%',overflow:'hidden',
+            border:`3px solid ${opp.color}`,
+            boxShadow:`0 0 12px ${opp.color}88`,
+            zIndex:10}}>
+            <CharFace charId={opp.id} size={28}/>
+          </div>
+
+          {/* Dice */}
+          {diceVal && (
+            <div style={{position:'absolute',bottom:'4%',right:'8%',
+              width:36,height:36,background:'#1e293b',borderRadius:8,
+              border:'2px solid rgba(255,255,255,.3)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              fontFamily:'Bangers,cursive',fontSize:20,color:'#fff',
+              animation: rolling ? 'diceRollCube .6s ease-in-out infinite' : 'none',
+              boxShadow: rolling ? '0 0 16px rgba(96,165,250,.5)' : 'none'}}>
+              {['','⚀','⚁','⚂','⚃','⚄','⚅'][diceVal]}
+            </div>
+          )}
+        </div>
+
+        {/* Side panel */}
+        <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:80}}>
+          <button onClick={rollDice}
+            disabled={!isMyTurn || rolling || finished}
+            style={{padding:'12px 8px',borderRadius:12,cursor:isMyTurn&&!rolling&&!finished?'pointer':'default',
+              background: isMyTurn&&!finished
+                ? 'linear-gradient(135deg,#2563eb,#1d4ed8)'
+                : 'rgba(255,255,255,.05)',
+              border: isMyTurn&&!finished
+                ? '2px solid #60a5fa'
+                : '2px solid rgba(255,255,255,.08)',
+              color:isMyTurn&&!finished?'#fff':'rgba(255,255,255,.25)',
+              fontFamily:'Bangers,cursive',fontSize:13,letterSpacing:1,
+              boxShadow:isMyTurn&&!finished?'0 4px 16px rgba(37,99,235,.5)':'none',
+              transition:'all .2s',animation:isMyTurn&&!rolling&&!finished?'pulse 1.5s ease-in-out infinite':'none'}}>
+            🎲<br/>{rolling?'...':isMyTurn?mySkip?'PERDER\nTURNO':'TIRAR':'ESPERA'}
+          </button>
+
+          {/* Code display */}
+          <div style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',
+            borderRadius:10,padding:'8px 4px',textAlign:'center'}}>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:8,color:'rgba(255,255,255,.3)',
+              letterSpacing:1,margin:'0 0 2px'}}>SALA</p>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:14,color:'#60a5fa',margin:0,letterSpacing:2}}>
+              {code}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Special popup */}
+      {popup && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:100,
+          display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:`${popup.color}22`,border:`2px solid ${popup.color}`,
+            borderRadius:20,padding:'20px 30px',textAlign:'center',
+            boxShadow:`0 0 40px ${popup.color}66`}}>
+            <p style={{fontSize:40,margin:0}}>{popup.emoji}</p>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:22,color:popup.color,
+              letterSpacing:2,margin:'4px 0 0'}}>{popup.label}</p>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:14,color:'#fff',margin:'2px 0 0'}}>
+              {popup.text}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Game over */}
+      {finished && (
+        <div style={{position:'fixed',inset:0,
+          background:'radial-gradient(ellipse at 50% 30%,rgba(20,0,10,.97),rgba(4,0,8,1))',
+          zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',
+          flexDirection:'column',gap:12,padding:24}}>
+          <div style={{fontSize:64}}>{iWon?'🏆':'😤'}</div>
+          <p style={{fontFamily:'Bangers,cursive',fontSize:52,letterSpacing:3,margin:0,
+            color:iWon?'#22c55e':'#ef4444',
+            textShadow:`0 0 40px ${iWon?'#22c55e':'#ef4444'}, 3px 3px 0 #000`}}>
+            {iWon?'¡GANASTE!':'PERDISTE'}
+          </p>
+          <div style={{display:'flex',gap:20,alignItems:'center'}}>
+            <div style={{textAlign:'center'}}>
+              <div style={{width:52,height:52,borderRadius:'50%',overflow:'hidden',
+                border:`3px solid ${char.color}`,margin:'0 auto 4px',
+                boxShadow:`0 0 16px ${char.color}`}}>
+                <CharFace charId={char.id} size={52}/>
+              </div>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:11,color:char.color,margin:0}}>{myAlias}</p>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:18,color:'#fff',margin:0}}>{myPos}/20</p>
+            </div>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:22,color:'#333',margin:0}}>VS</p>
+            <div style={{textAlign:'center'}}>
+              <div style={{width:52,height:52,borderRadius:'50%',overflow:'hidden',
+                border:`3px solid ${opp.color}`,margin:'0 auto 4px',
+                boxShadow:`0 0 16px ${opp.color}`}}>
+                <CharFace charId={opp.id} size={52}/>
+              </div>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:11,color:opp.color,margin:0}}>{oppAlias}</p>
+              <p style={{fontFamily:'Bangers,cursive',fontSize:18,color:'#fff',margin:0}}>{oppPos}/20</p>
+            </div>
+          </div>
+          <button onClick={onBack} className="vs-btn"
+            style={{padding:'13px 30px',fontSize:16,marginTop:8,
+              background:'linear-gradient(135deg,#1e3a8a,#2563eb)',
+              border:'2px solid #60a5fa'}}>
+            ← VOLVER AL MENÚ
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [charA, setCharA] = useState(CHARS.find(c=>c.id==='sakuragi'));
   const [charB, setCharB] = useState(CHARS.find(c=>c.id==='rukawa'));
   const [appMode, setAppMode] = useState('vs');
+  const [multiRoom, setMultiRoom] = useState(null); // { code, role, myChar, oppChar, oppAlias }
   const [charStats, setCharStats] = useState(
     () => Object.fromEntries(CHARS.map(c => [c.id, {...c.stats}]))
   );
@@ -2552,6 +3131,25 @@ function App() {
       {appMode==='ranking'&&(
         <RankingScreen onBack={()=>setAppMode('vs')} playerAlias={playerAlias}/>
       )}
+      {appMode==='multi'&&!multiRoom&&(
+        <MultiplayerLobby
+          onBack={()=>setAppMode('vs')}
+          playerAlias={playerAlias||'Jugador'}
+          onStartRace={roomInfo=>setMultiRoom(roomInfo)}
+        />
+      )}
+      {appMode==='multi'&&multiRoom&&(
+        <MultiplayerRace
+          code={multiRoom.code}
+          role={multiRoom.role}
+          myChar={multiRoom.myChar}
+          oppChar={multiRoom.oppChar}
+          myAlias={playerAlias||'Jugador'}
+          oppAlias={multiRoom.oppAlias}
+          onBack={()=>{ setMultiRoom(null); setAppMode('vs'); }}
+          onResult={won=>handleGameResult(won)}
+        />
+      )}
 
       <div style={{maxWidth:540,margin:'0 auto',padding:14}}>
 
@@ -2668,6 +3266,20 @@ function App() {
           <span style={{fontFamily:'Bangers,cursive',fontSize:18,letterSpacing:3,color:'#fbbf24',
             textShadow:'0 0 12px rgba(251,191,36,.6)'}}>VER RANKING</span>
           <span style={{fontSize:20}}>🏆</span>
+        </button>
+
+        {/* MULTIJUGADOR button */}
+        <button onClick={()=>{ setMultiRoom(null); setAppMode('multi'); }}
+          style={{width:'100%',marginTop:8,padding:'13px',borderRadius:14,cursor:'pointer',
+            background:'linear-gradient(135deg,#0c2a5e,#1e3a8a)',
+            border:'2px solid rgba(96,165,250,.6)',
+            boxShadow:'0 0 0 1px rgba(96,165,250,.15),0 4px 24px rgba(29,78,216,.35)',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:10,
+            transition:'all .2s'}}>
+          <span style={{fontSize:20}}>🌐</span>
+          <span style={{fontFamily:'Bangers,cursive',fontSize:18,letterSpacing:3,color:'#93c5fd',
+            textShadow:'0 0 12px rgba(96,165,250,.6)'}}>MULTIJUGADOR</span>
+          <span style={{fontSize:20}}>⚔️</span>
         </button>
 
       </div>
