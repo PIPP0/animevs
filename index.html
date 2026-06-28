@@ -41,13 +41,21 @@
     if (!alias || alias === 'Jugador') return;
     try {
       const ref = doc(db, 'ranking', alias);
-      const snap = await getDoc(ref);
-      // Solo actualiza si los datos son mejores o es nuevo
       await setDoc(ref, {
         alias, wins, losses, rp, favChar,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        lastSeen: Date.now()
       }, { merge: true });
     } catch(e) { console.warn('Firebase write error:', e); }
+  };
+
+  // Heartbeat: actualiza lastSeen sin sobreescribir otros datos
+  window.pingPresence = async (alias) => {
+    if (!alias || alias === 'Jugador') return;
+    try {
+      const ref = doc(db, 'ranking', alias);
+      await setDoc(ref, { lastSeen: Date.now() }, { merge: true });
+    } catch(e) {}
   };
 
   // Obtener top 10 del ranking global (orden: victorias desc, luego RP como desempate)
@@ -1991,7 +1999,9 @@ function RankingScreen({ onBack, playerAlias }) {
   const medalColor = pos => pos===1?'#fbbf24':pos===2?'#94a3b8':'#b45309';
   const medalEmoji = pos => pos===1?'🥇':pos===2?'🥈':'🥉';
 
-  const ROW = ({pos, name, wins:w, losses:l=0, pct:p, char, rp:rpVal=0, isMe=false}) => (
+  const ROW = ({pos, name, wins:w, losses:l=0, pct:p, char, rp:rpVal=0, isMe=false, lastSeen=0}) => {
+    const isOnline = lastSeen > 0 && (Date.now() - lastSeen) < 5 * 60 * 1000;
+    return (
     <div style={{
       display:'flex',alignItems:'center',gap:12,
       padding:'11px 14px',
@@ -2011,10 +2021,21 @@ function RankingScreen({ onBack, playerAlias }) {
         }
       </div>
       {/* Avatar */}
-      <div style={{width:38,height:38,borderRadius:'50%',overflow:'hidden',flexShrink:0,
-        border:`2px solid ${isMe?'#fbbf24':(CHARS.find(c=>c.id===char)||CHARS[0]).color}`,
-        background:'#111'}}>
-        <CharFace charId={char} size={38}/>
+      <div style={{position:'relative',width:38,height:38,flexShrink:0}}>
+        <div style={{width:38,height:38,borderRadius:'50%',overflow:'hidden',
+          border:`2px solid ${isMe?'#fbbf24':(CHARS.find(c=>c.id===char)||CHARS[0]).color}`,
+          background:'#111'}}>
+          <CharFace charId={char} size={38}/>
+        </div>
+        {isOnline && (
+          <div style={{
+            position:'absolute',bottom:1,right:1,
+            width:10,height:10,borderRadius:'50%',
+            background:'#22c55e',
+            border:'2px solid #0a0818',
+            boxShadow:'0 0 6px #22c55e',
+          }}/>
+        )}
       </div>
       {/* Nombre */}
       <div style={{flex:1,minWidth:0}}>
@@ -2039,7 +2060,8 @@ function RankingScreen({ onBack, playerAlias }) {
         <p style={{fontSize:10,color:'rgba(255,255,255,.4)',margin:0}}>{String(w).padStart(2,'0')}/{String(w+l).padStart(2,'0')}</p>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div style={{minHeight:'100vh',background:'linear-gradient(180deg,#0a0818 0%,#130f2a 100%)',
@@ -2109,7 +2131,7 @@ function RankingScreen({ onBack, playerAlias }) {
             const t = (p.wins||0)+(p.losses||0);
             const pc = t>0?Math.round((p.wins||0)/t*100):0;
             return <ROW key={p.alias} pos={i+1} name={p.alias}
-              wins={p.wins||0} losses={p.losses||0} pct={pc} char={p.favChar||'sakuragi'} rp={p.rp||0} isMe={isMe}/>;
+              wins={p.wins||0} losses={p.losses||0} pct={pc} char={p.favChar||'sakuragi'} rp={p.rp||0} isMe={isMe} lastSeen={p.lastSeen||0}/>;
           })
         )}
 
@@ -2121,7 +2143,7 @@ function RankingScreen({ onBack, playerAlias }) {
             <div style={{flex:1,height:1,background:'rgba(255,255,255,.1)'}}/>
           </div>
           <ROW pos={globalRanking.length+1} name={playerAlias||'Tú'}
-            wins={wins} losses={losses} pct={pct} char={favData.id} rp={rp} isMe={true}/>
+            wins={wins} losses={losses} pct={pct} char={favData.id} rp={rp} isMe={true} lastSeen={Date.now()}/>
         </>)}
 
       </div>
@@ -2341,7 +2363,11 @@ function App() {
     };
     // Pequeño delay para que el módulo Firebase termine de cargar
     const t = setTimeout(sync, 1500);
-    return () => clearTimeout(t);
+    // Heartbeat: actualiza lastSeen cada 60s para mostrar punto verde en ranking
+    const heartbeat = setInterval(() => {
+      if (window.pingPresence) window.pingPresence(alias);
+    }, 60000);
+    return () => { clearTimeout(t); clearInterval(heartbeat); };
   }, []);
 
   const saveAlias = (name) => {
