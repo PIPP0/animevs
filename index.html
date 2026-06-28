@@ -2749,7 +2749,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             await window.updateRoom(code,{[skipKey]:false,turn:nextTurn,locked:false,
               status:`Turno de ${oppAlias}`});
             processingRef.current = false;
-          }, 2200);
+          }, 1200);
         } else {
           setPhase('player');
           setStatus('¡Tu turno!');
