@@ -2709,11 +2709,13 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
       roomRef.current = data;
       setStatus(data.status||'');
 
-      // Update opponent positions (not mine while I'm processing)
+      // Update positions when not processing (covers captures by opponent too)
+      const myFirePos  = isP1 ? data.p1pos : data.p2pos;
       const oppFirePos = isP1 ? data.p2pos : data.p1pos;
-      if (oppFirePos && !processingRef.current) {
-        aPosRef.current = [...oppFirePos];
-        setAPos([...oppFirePos]);
+      if (!processingRef.current) {
+        if (oppFirePos) { aPosRef.current = [...oppFirePos]; setAPos([...oppFirePos]); }
+        // Sync my own positions if the opponent captured me (they wrote our key)
+        if (myFirePos) { pPosRef.current = [...myFirePos]; setPPos([...myFirePos]); }
       }
 
       // Opponent dice display
@@ -2801,13 +2803,16 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
     await checkCapture('p', lane, to);
 
     const won = pPosRef.current.filter(p=>p>=TOTAL).length >= WIN_NEED;
-    const posKey  = isP1?'p1pos':'p2pos';
-    const skipKey = isP1?'skipP1':'skipP2';
-    const nextTurn= isP1?'p2':'p1';
+    const posKey    = isP1?'p1pos':'p2pos';
+    const oppPosKey = isP1?'p2pos':'p1pos'; // write captured positions back to Firestore
+    const skipKey   = isP1?'skipP1':'skipP2';
+    const nextTurn  = isP1?'p2':'p1';
 
     if (won) {
       await window.updateRoom(code,{
-        [posKey]:[...pPosRef.current], locked:false,
+        [posKey]:[...pPosRef.current],
+        [oppPosKey]:[...aPosRef.current], // persist any captures
+        locked:false,
         phase:'finished', winner:role,
         status:`🏆 ¡${myAlias} ganó!`
       });
@@ -2816,6 +2821,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
     } else {
       await window.updateRoom(code,{
         [posKey]:[...pPosRef.current],
+        [oppPosKey]:[...aPosRef.current], // persist any captures
         [skipKey]: skipSelf,
         turn:nextTurn, locked:false,
         status:`Turno de ${oppAlias}`
