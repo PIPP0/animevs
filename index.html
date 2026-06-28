@@ -2447,16 +2447,26 @@ function MultiplayerLobby({ onBack, playerAlias, onStartRace }) {
 
         {/* Character picker (always shown) */}
         {step !== 'waiting' && (
-          <div style={{background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',
-            borderRadius:16,padding:14,marginBottom:16}}>
-            <p style={{fontFamily:'Bangers,cursive',fontSize:14,letterSpacing:2,
-              color:'rgba(255,255,255,.5)',margin:'0 0 10px'}}>TU PERSONAJE</p>
+          <div style={{
+            background:'rgba(255,255,255,.05)',
+            border: selChar ? '1px solid rgba(255,255,255,.1)' : '2px solid rgba(96,165,250,.7)',
+            boxShadow: selChar ? 'none' : '0 0 18px rgba(96,165,250,.35), inset 0 0 12px rgba(96,165,250,.08)',
+            animation: selChar ? 'none' : 'pulse 1.5s ease-in-out infinite',
+            borderRadius:16,padding:14,marginBottom:16,transition:'all .3s'}}>
+            <p style={{fontFamily:'Bangers,cursive',fontSize:13,letterSpacing:2,
+              color: selChar ? 'rgba(255,255,255,.4)' : '#93c5fd',
+              margin:'0 0 10px',
+              textShadow: selChar ? 'none' : '0 0 8px rgba(96,165,250,.6)'}}>
+              {selChar ? 'TU PERSONAJE' : '👆 SELECCIONA TU PERSONAJE'}
+            </p>
             <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
               {CHARS.map(c=>(
                 <div key={c.id} onClick={()=>setSelChar(c)}
                   style={{cursor:'pointer',borderRadius:10,padding:4,textAlign:'center',
                     background:selChar?.id===c.id?`${c.color}33`:'rgba(255,255,255,.04)',
                     border:`2px solid ${selChar?.id===c.id?c.color:'transparent'}`,
+                    boxShadow:selChar?.id===c.id?`0 0 14px ${c.color}88`:'none',
+                    transform:selChar?.id===c.id?'scale(1.08)':'scale(1)',
                     transition:'all .15s'}}>
                   <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',margin:'0 auto 2px',
                     border:`1.5px solid ${c.color}88`}}>
@@ -2468,9 +2478,10 @@ function MultiplayerLobby({ onBack, playerAlias, onStartRace }) {
               ))}
             </div>
             {selChar && (
-              <p style={{textAlign:'center',fontFamily:'Bangers,cursive',fontSize:15,
-                color:selChar.color,margin:'8px 0 0',letterSpacing:1}}>
-                {selChar.name} seleccionado ✓
+              <p style={{textAlign:'center',fontFamily:'Bangers,cursive',fontSize:14,
+                color:selChar.color,margin:'8px 0 0',letterSpacing:1,
+                textShadow:`0 0 10px ${selChar.color}88`}}>
+                ✓ {selChar.name}
               </p>
             )}
           </div>
@@ -2479,10 +2490,10 @@ function MultiplayerLobby({ onBack, playerAlias, onStartRace }) {
         {/* MENU step */}
         {step==='menu' && (
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            <BtnRow onClick={()=>setStep('create')}
+            <BtnRow onClick={handleCreate} disabled={loading}
               style={{background:'linear-gradient(135deg,#1e3a8a,#2563eb)',
                 border:'2px solid #60a5fa',boxShadow:'0 4px 20px rgba(37,99,235,.5)'}}>
-              🏠 CREAR SALA
+              {loading ? '⏳ Creando...' : '🏠 CREAR SALA'}
             </BtnRow>
             <BtnRow onClick={()=>setStep('join')}
               style={{background:'linear-gradient(135deg,#065f46,#059669)',
@@ -2492,22 +2503,6 @@ function MultiplayerLobby({ onBack, playerAlias, onStartRace }) {
             <p style={{textAlign:'center',fontSize:11,color:'rgba(255,255,255,.3)',marginTop:4}}>
               Ambos jugadores necesitan estar en la misma red o usar el código
             </p>
-          </div>
-        )}
-
-        {/* CREATE step */}
-        {step==='create' && (
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            <BtnRow onClick={handleCreate} disabled={loading||!selChar}
-              style={{background:'linear-gradient(135deg,#1e3a8a,#2563eb)',
-                border:'2px solid #60a5fa',boxShadow:'0 4px 20px rgba(37,99,235,.5)'}}>
-              {loading ? '⏳ Creando...' : '🏠 CREAR SALA'}
-            </BtnRow>
-            <button onClick={()=>setStep('menu')}
-              style={{background:'none',border:'none',color:'rgba(255,255,255,.4)',
-                cursor:'pointer',fontFamily:'Bangers,cursive',fontSize:12,letterSpacing:1}}>
-              ← Volver
-            </button>
           </div>
         )}
 
