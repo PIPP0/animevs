@@ -2735,9 +2735,25 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
 
       // Activate my turn
       if (!processingRef.current && data.turn===role && !data.locked && data.phase==='playing') {
-        skipMeRef.current = isP1 ? !!data.skipP1 : !!data.skipP2;
-        setPhase('player');
-        setStatus('¡Tu turno!');
+        const shouldSkip = isP1 ? !!data.skipP1 : !!data.skipP2;
+        skipMeRef.current = shouldSkip;
+        if (shouldSkip) {
+          // Auto-skip BLOQUEO — no need for user to press anything
+          processingRef.current = true;
+          setPhase('ai');
+          setStatus('🛑 ¡BLOQUEO! Pierdes este turno...');
+          const skipKey  = isP1?'skipP1':'skipP2';
+          const nextTurn = isP1?'p2':'p1';
+          setTimeout(async () => {
+            skipMeRef.current = false;
+            await window.updateRoom(code,{[skipKey]:false,turn:nextTurn,locked:false,
+              status:`Turno de ${oppAlias}`});
+            processingRef.current = false;
+          }, 2200);
+        } else {
+          setPhase('player');
+          setStatus('¡Tu turno!');
+        }
       }
     });
     return () => { if (unsubRef.current) unsubRef.current(); };
@@ -2747,19 +2763,6 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
   const rollDice = async () => {
     if (phase!=='player'||rolling||processingRef.current) return;
     processingRef.current = true;
-
-    // BLOQUEO skip
-    if (skipMeRef.current) {
-      skipMeRef.current = false;
-      const skipKey  = isP1?'skipP1':'skipP2';
-      const nextTurn = isP1?'p2':'p1';
-      setStatus(`🛑 ${char.name} pierde turno por BLOQUEO`);
-      setPhase('ai');
-      await D(1200);
-      await window.updateRoom(code,{[skipKey]:false,turn:nextTurn,locked:false,status:`Turno de ${oppAlias}`});
-      processingRef.current=false;
-      return;
-    }
 
     await window.updateRoom(code,{locked:true});
     setRolling(true); await D(900); setRolling(false);
@@ -3234,8 +3237,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             transition:'all .2s'}}>
           {rolling?'...'
             :phase==='select'?'🎯 ELIGE JUGADOR'
-            :canRoll?(skipMeRef.current?'🛑 PASAR TURNO'
-              :localMod?`${({high:'⬆️',low:'⬇️',even:'⚡',odd:'🔥'})[localMod]} TIRAR DADO`
+            :canRoll?(localMod?`${({high:'⬆️',low:'⬇️',even:'⚡',odd:'🔥'})[localMod]} TIRAR DADO`
               :'🎲 TIRAR DADO')
             :`⚡ ${aiChar.name.toUpperCase()} LANZANDO...`}
         </button>
