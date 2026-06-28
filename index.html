@@ -2628,6 +2628,9 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
   const processingRef             = useRef(false);
   const unsubRef                  = useRef(null);
   const roomRef                   = useRef(null);
+  const [showDicePanel, setShowDicePanel] = useState(false);
+  const [gameCoins, setGameCoins] = useState(()=>parseInt(localStorage.getItem('animevs_coins')||'0'));
+  const [localMod, setLocalMod]   = useState(null);
 
   const setP = (lane, pos) => {
     pPosRef.current = pPosRef.current.map((v,i)=>i===lane?Math.max(0,Math.min(TOTAL,pos)):v);
@@ -2758,7 +2761,13 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
 
     await window.updateRoom(code,{locked:true});
     setRolling(true); await D(900); setRolling(false);
-    const roll = Math.floor(Math.random()*6)+1;
+    let roll;
+    if (localMod==='high') { roll=Math.max(Math.floor(Math.random()*6)+1,Math.floor(Math.random()*6)+1); }
+    else if (localMod==='low') { roll=Math.min(Math.floor(Math.random()*6)+1,Math.floor(Math.random()*6)+1); }
+    else if (localMod==='even') { roll=[2,4,6][Math.floor(Math.random()*3)]; }
+    else if (localMod==='odd') { roll=[1,3,5][Math.floor(Math.random()*3)]; }
+    else { roll=Math.floor(Math.random()*6)+1; }
+    setLocalMod(null); // consumir modificador
     setDiceVal(roll);
     const rollKey = isP1?'p1lastRoll':'p2lastRoll';
     await window.updateRoom(code,{[rollKey]:roll});
@@ -3149,14 +3158,60 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
 
       {/* TIRAR DADO BUTTON */}
       <div style={{width:'100%',maxWidth:480,flexShrink:0,
-        background:'rgba(0,0,0,.45)',padding:'6px 10px 5px',
-        display:'flex',gap:8,alignItems:'center'}}>
-        <div style={{background:'rgba(0,0,0,.55)',borderRadius:8,padding:'5px 7px',
-          display:'flex',flexDirection:'column',alignItems:'center',minWidth:44,flexShrink:0}}>
-          <span style={{fontSize:14}}>⚡</span>
-          <span style={{fontFamily:'Bangers',fontSize:7,color:'rgba(255,255,255,.3)',letterSpacing:.5}}>SALA</span>
-          <span style={{fontFamily:'Bangers',fontSize:9,color:'rgba(255,255,255,.5)',letterSpacing:1}}>{code}</span>
-        </div>
+        background:'rgba(0,0,0,.45)',padding:'6px 10px 5px'}}>
+
+        {/* Shop panel — aparece cuando showDicePanel y es tu turno */}
+        {showDicePanel && canRoll && (
+          <div style={{display:'flex',gap:5,marginBottom:6,animation:'slideUp .2s ease'}}>
+            {SHOP_ITEMS.map(item=>{
+              const active = localMod===item.id;
+              const canAfford = gameCoins>=item.cost;
+              return (
+                <div key={item.id} onClick={()=>{
+                  if(active){setLocalMod(null);setShowDicePanel(false);return;}
+                  if(!canAfford) return;
+                  const nc=gameCoins-item.cost;
+                  localStorage.setItem('animevs_coins',String(nc));
+                  setGameCoins(nc);
+                  setLocalMod(item.id);
+                  setShowDicePanel(false);
+                }}
+                  style={{flex:1,padding:'7px 3px',borderRadius:10,cursor:canAfford?'pointer':'not-allowed',
+                    textAlign:'center',transition:'all .15s',
+                    background:active?`${item.color}30`:'rgba(255,255,255,.08)',
+                    border:`2px solid ${active?item.color:'rgba(255,255,255,.15)'}`,
+                    opacity:canAfford?1:.4}}>
+                  <div style={{fontSize:16,lineHeight:1}}>{item.emoji}</div>
+                  <p style={{fontFamily:'Bangers',fontSize:9,color:active?item.color:'#ccc',
+                    letterSpacing:.5,marginTop:2,lineHeight:1}}>{item.label}</p>
+                  <p style={{fontSize:9,color:'#94a3b8',marginTop:1}}>{item.desc}</p>
+                  <p style={{fontFamily:'Bangers',fontSize:10,color:'#f59e0b',marginTop:1}}>
+                    {active?'✓ ACTIVO':('🪙 '+item.cost)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        {/* ⚡ shop toggle */}
+        <button onClick={()=>setShowDicePanel(p=>!p)}
+          disabled={!canRoll}
+          style={{
+            flexShrink:0,width:46,height:56,borderRadius:10,
+            cursor:canRoll?'pointer':'default',
+            background:showDicePanel
+              ?'linear-gradient(135deg,#7c3aed,#6b46c1)'
+              :localMod?'rgba(245,158,11,.2)':'rgba(255,255,255,.07)',
+            border:`2px solid ${showDicePanel?'#9f7aea':localMod?'#f59e0b':'rgba(255,255,255,.12)'}`,
+            display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+            gap:2,padding:'4px 0',opacity:1,transition:'all .2s'}}>
+          <span style={{fontSize:16,opacity:canRoll?1:.4}}>⚡</span>
+          <span style={{fontFamily:'Bangers',fontSize:10,color:'#f59e0b'}}>{gameCoins}</span>
+          <span style={{fontFamily:'Bangers',fontSize:7,color:'rgba(255,255,255,.3)',letterSpacing:.3}}>SALA</span>
+          <span style={{fontFamily:'Bangers',fontSize:7,color:'rgba(255,255,255,.45)',letterSpacing:.5}}>{code}</span>
+        </button>
         <button onClick={rollDice} disabled={!canRoll&&phase!=='select'}
           style={{flex:1,padding:'13px',fontSize:17,borderRadius:12,
             cursor:(canRoll||phase==='select')?'pointer':'not-allowed',
@@ -3173,10 +3228,13 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             transition:'all .2s'}}>
           {rolling?'...'
             :phase==='select'?'🎯 ELIGE JUGADOR'
-            :canRoll?(skipMeRef.current?'🛑 PASAR TURNO':'🎲 TIRAR DADO')
+            :canRoll?(skipMeRef.current?'🛑 PASAR TURNO'
+              :localMod?`${({high:'⬆️',low:'⬇️',even:'⚡',odd:'🔥'})[localMod]} TIRAR DADO`
+              :'🎲 TIRAR DADO')
             :`⚡ ${aiChar.name.toUpperCase()} LANZANDO...`}
         </button>
-      </div>
+        </div>{/* end flex row */}
+      </div>{/* end TIRAR DADO container */}
 
       {/* SPECIALS LEGEND */}
       <div style={{width:'100%',maxWidth:480,flexShrink:0,
