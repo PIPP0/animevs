@@ -59,9 +59,9 @@
   };
 
   // Obtener top 10 del ranking global (orden: victorias desc, luego RP como desempate)
-  window.getGlobalRanking = async () => {
+  window.getGlobalRanking = async (maxFetch = 200) => {
     try {
-      const q = query(collection(db, 'ranking'), orderBy('wins', 'desc'), limit(10));
+      const q = query(collection(db, 'ranking'), orderBy('wins', 'desc'), limit(maxFetch));
       const snap = await getDocs(q);
       const data = snap.docs.map(d => d.data());
       // Desempate por % de victorias cuando wins son iguales
@@ -2027,7 +2027,7 @@ function RankingScreen({ onBack, playerAlias }) {
         console.log('[RANKING SYNC] guardado OK');
       }
       if (window.getGlobalRanking) {
-        const data = await window.getGlobalRanking();
+        const data = await window.getGlobalRanking(200);
         setGlobalRanking(data);
       }
       setLoadingRanking(false);
@@ -2035,9 +2035,11 @@ function RankingScreen({ onBack, playerAlias }) {
     load();
   }, []);
 
-  const myPos = globalRanking.length > 0
-    ? globalRanking.findIndex(p => p.alias === playerAlias) + 1 || globalRanking.length + 1
-    : '—';
+  // top 10 para mostrar; posición real del usuario en lista completa
+  const top10 = globalRanking.slice(0, 10);
+  const myRealIdx = globalRanking.findIndex(p => p.alias === playerAlias);
+  const myPos = myRealIdx >= 0 ? myRealIdx + 1 : (globalRanking.length > 0 ? globalRanking.length + 1 : '—');
+  const inTop10 = myRealIdx >= 0 && myRealIdx < 10;
 
   const medalColor = pos => pos===1?'#fbbf24':pos===2?'#94a3b8':'#b45309';
   const medalEmoji = pos => pos===1?'🥇':pos===2?'🥈':'🥉';
@@ -2157,19 +2159,19 @@ function RankingScreen({ onBack, playerAlias }) {
           <span style={{fontSize:10,color:'#60a5fa',letterSpacing:1}}>WINS</span>
         </div>
 
-        {/* Lista global */}
+        {/* Lista global — solo top 10 */}
         {loadingRanking ? (
           <div style={{textAlign:'center',padding:'30px',color:'rgba(255,255,255,.4)',
             fontFamily:'Bangers,cursive',letterSpacing:2,fontSize:14}}>
             ⏳ CARGANDO RANKING...
           </div>
-        ) : globalRanking.length === 0 ? (
+        ) : top10.length === 0 ? (
           <div style={{textAlign:'center',padding:'24px',color:'rgba(255,255,255,.3)',fontSize:12}}>
             Aún no hay jugadores en el ranking global.<br/>
             <span style={{color:'#fbbf24'}}>¡Sé el primero en jugar!</span>
           </div>
         ) : (
-          globalRanking.map((p,i) => {
+          top10.map((p,i) => {
             const isMe = p.alias === playerAlias;
             const t = (p.wins||0)+(p.losses||0);
             const pc = t>0?Math.round((p.wins||0)/t*100):0;
@@ -2178,14 +2180,14 @@ function RankingScreen({ onBack, playerAlias }) {
           })
         )}
 
-        {/* Separador si el jugador no está en top 10 */}
-        {!loadingRanking && globalRanking.length>0 && !globalRanking.find(p=>p.alias===playerAlias) && (<>
-          <div style={{display:'flex',alignItems:'center',gap:8,margin:'12px 0'}}>
+        {/* Separador + posición real si el jugador NO está en el top 10 */}
+        {!loadingRanking && top10.length > 0 && !inTop10 && (<>
+          <div style={{display:'flex',alignItems:'center',gap:8,margin:'14px 0 10px'}}>
             <div style={{flex:1,height:1,background:'rgba(255,255,255,.1)'}}/>
-            <span style={{fontSize:11,color:'rgba(255,255,255,.3)'}}>···</span>
+            <span style={{fontSize:12,color:'rgba(255,255,255,.3)',letterSpacing:2}}>· · ·</span>
             <div style={{flex:1,height:1,background:'rgba(255,255,255,.1)'}}/>
           </div>
-          <ROW pos={globalRanking.length+1} name={playerAlias||'Tú'}
+          <ROW pos={myPos} name={playerAlias||'Tú'}
             wins={wins} losses={losses} pct={pct} char={favData.id} rp={rp} isMe={true} lastSeen={Date.now()}/>
         </>)}
 
