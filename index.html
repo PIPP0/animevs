@@ -2820,6 +2820,9 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+  const isMyTurnNow = phase === 'player';
+  const canRoll = isMyTurnNow && !rolling && !gameOver;
+
   return (
     <div style={{position:'fixed',inset:0,background:'#0a1628',zIndex:115,
       display:'flex',flexDirection:'column',alignItems:'center',overflow:'hidden'}}>
@@ -2828,7 +2831,8 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
       <div style={{width:'100%',maxWidth:480,flexShrink:0,
         background:'linear-gradient(90deg,#c8001a,#e8242b,#c8001a)',
         borderBottom:'3px solid #7a0010',
-        display:'flex',alignItems:'center',padding:'6px 10px',gap:6,position:'relative',zIndex:5}}>
+        display:'flex',alignItems:'center',padding:'6px 10px',gap:6,
+        position:'relative',zIndex:5}}>
         {[0,1,2,3,4,5].map(i=>(
           <div key={i} style={{position:'absolute',top:0,bottom:0,left:`${i*18}%`,width:'7%',
             background:'rgba(0,0,0,.08)',transform:'skewX(-15deg)',pointerEvents:'none'}}/>
@@ -2836,18 +2840,20 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
         <button onClick={()=>{processingRef.current=false;onBack();}} style={{
           background:'rgba(0,0,0,.35)',color:'#fff',border:'2px solid rgba(255,255,255,.4)',
           fontSize:11,cursor:'pointer',padding:'4px 9px',fontFamily:'Bangers',letterSpacing:1,
-          borderRadius:5,position:'relative',flexShrink:0}}>← SALIR</button>
-        <div style={{flex:1,textAlign:'center',position:'relative'}}>
-          <p style={{fontFamily:'Bangers',fontSize:18,color:'#fff',letterSpacing:3,lineHeight:1,
-            textShadow:'2px 2px 0 rgba(0,0,0,.5)',margin:0}}>
-            {char.name} <span style={{color:'#ffd700'}}>VS</span> {aiChar.name}
+          borderRadius:5,position:'relative',flexShrink:0,zIndex:2}}>← SALIR</button>
+        <div style={{flex:1,textAlign:'center',position:'relative',zIndex:2}}>
+          <p style={{fontFamily:'Bangers',fontSize:17,color:'#fff',letterSpacing:2,
+            textShadow:'2px 2px 0 rgba(0,0,0,.5)',margin:0,lineHeight:1}}>
+            <span style={{color:char.color}}>{char.name}</span>
+            {' '}<span style={{color:'#ffd700'}}>VS</span>{' '}
+            <span style={{color:aiChar.color}}>{aiChar.name}</span>
           </p>
-          <p style={{fontSize:11,color:'rgba(255,255,255,.65)',letterSpacing:3,margin:0}}>
+          <p style={{fontSize:9,color:'rgba(255,255,255,.65)',letterSpacing:2,margin:0}}>
             · MULTIJUGADOR 🌐 · META EXACTA ·
           </p>
         </div>
         <div style={{fontFamily:'Bangers',fontSize:11,color:'#fff',
-          textAlign:'right',lineHeight:1.5,flexShrink:0}}>
+          textAlign:'right',lineHeight:1.6,flexShrink:0,position:'relative',zIndex:2}}>
           <p style={{color:'#ffd700',margin:0}}>✓ {pPos.filter(p=>p>=TOTAL).length}/{WIN_NEED}</p>
           <p style={{color:'rgba(255,255,255,.5)',margin:0}}>RIV {aPos.filter(p=>p>=TOTAL).length}/{WIN_NEED}</p>
         </div>
@@ -2856,81 +2862,76 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
       {/* STATUS */}
       <div style={{width:'100%',maxWidth:480,flexShrink:0,
         background:'rgba(0,0,0,.55)',borderBottom:'1px solid rgba(255,255,255,.06)',
-        padding:'5px 12px',textAlign:'center'}}>
-        <p style={{fontFamily:'Bangers',fontSize:13,color:'#e2e8f0',letterSpacing:2,margin:0}}>{status}</p>
+        padding:'4px 12px',textAlign:'center'}}>
+        <p style={{fontFamily:'Bangers',fontSize:13,letterSpacing:2,margin:0,
+          color:isMyTurnNow?'#22c55e':'#e2e8f0',
+          textShadow:isMyTurnNow?'0 0 10px #22c55e':'none'}}>
+          {status}
+        </p>
       </div>
 
       {/* MAIN ROW */}
       <div style={{width:'100%',maxWidth:480,flex:1,minHeight:0,display:'flex',overflow:'hidden'}}>
 
-        {/* LEFT — MY CARD */}
-        <div style={{width:76,flexShrink:0,
-          background:'linear-gradient(180deg,#0d1c3a,#0a1628)',
+        {/* LEFT — MI CARTA */}
+        <div style={{width:82,flexShrink:0,
+          background:'linear-gradient(180deg,#0d1c3a 0%,#091525 100%)',
           borderRight:`2px solid ${char.color}44`,
           display:'flex',flexDirection:'column',alignItems:'center',
-          padding:'8px 4px',gap:4,
+          padding:'6px 4px',gap:3,
           boxShadow:`inset -6px 0 18px ${char.color}18`}}>
           <div style={{position:'relative'}}>
-            <div style={{width:46,height:46,borderRadius:'50%',overflow:'hidden',
+            <div style={{width:52,height:52,borderRadius:'50%',overflow:'hidden',
               border:`2px solid ${char.color}`,
-              boxShadow:`0 0 14px ${char.color}aa`,
-              animation:(phase==='player'||phase==='select')?'charPulse 1.8s ease infinite':'none'}}>
-              <CharFace charId={char.id} size={46}/>
+              boxShadow:`0 0 16px ${char.color}aa`,
+              animation:isMyTurnNow?'charPulse 1.8s ease infinite':'none'}}>
+              <CharFace charId={char.id} size={52}/>
             </div>
-            {(phase==='player'||phase==='select')&&(
-              <div style={{position:'absolute',top:1,right:1,width:10,height:10,borderRadius:'50%',
-                background:'#22c55e',border:'2px solid #0a1628',boxShadow:'0 0 6px #22c55e'}}/>
-            )}
+            <div style={{position:'absolute',bottom:1,right:1,width:11,height:11,
+              borderRadius:'50%',background:'#22c55e',border:'2px solid #0a1628',
+              boxShadow:'0 0 6px #22c55e'}}/>
           </div>
           <p style={{fontFamily:'Bangers',fontSize:11,color:char.color,letterSpacing:1,
             textAlign:'center',lineHeight:1,margin:0,textShadow:`0 0 10px ${char.color}88`}}>
             {char.name}
           </p>
-          <p style={{fontFamily:'Bangers',fontSize:9,color:'rgba(255,255,255,.4)',
-            letterSpacing:.5,margin:0,textAlign:'center'}}>{myAlias}</p>
-          <div style={{display:'flex',gap:3,flexWrap:'wrap',justifyContent:'center',maxWidth:64}}>
-            {[0,1,2,3].map(i=>(
-              <div key={i} style={{
-                width:14,height:14,borderRadius:'50%',
-                background:pPos[i]>=TOTAL?'transparent':'rgba(255,255,255,.1)',
-                border:`2px solid ${pPos[i]>=TOTAL?char.color:'rgba(255,255,255,.15)'}`,
-                boxShadow:pPos[i]>=TOTAL?`0 0 8px ${char.color}`:'none',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:pPos[i]>=TOTAL?10:0,
-                transition:'all .4s'}}>
-                {pPos[i]>=TOTAL?'🏀':''}
-              </div>
+          <p style={{fontFamily:'Bangers',fontSize:8,color:'rgba(255,255,255,.35)',
+            letterSpacing:.5,margin:0}}>SHOHOKU</p>
+          <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{width:13,height:13,borderRadius:'50%',
+                background:pPos[i]>=TOTAL?char.color:'rgba(255,255,255,.1)',
+                border:`2px solid ${pPos[i]>=TOTAL?char.color:'rgba(255,255,255,.2)'}`,
+                boxShadow:pPos[i]>=TOTAL?`0 0 8px ${char.color}`:'none',transition:'all .4s'}}/>
             ))}
           </div>
-          <p style={{fontFamily:'Bangers',fontSize:22,color:'#fff',lineHeight:1,margin:0,
-            textShadow:`0 0 12px ${char.color}`}}>
-            {pPos.filter(p=>p>=TOTAL).length}
-            <span style={{fontSize:11,color:`${char.color}88`}}>/{WIN_NEED}</span>
-          </p>
-          <div style={{background:`linear-gradient(145deg,${char.color}cc,${char.color}88)`,
-            borderRadius:10,padding:3,boxShadow:`0 3px 12px ${char.color}66`,
-            border:`2px solid ${char.color}`}}>
-            <Dice3D val={diceVal} rolling={rolling} color={char.color} size={42}/>
+          <div style={{display:'flex',justifyContent:'center'}}>
+            <div style={{width:13,height:13,borderRadius:'50%',
+              background:pPos[3]>=TOTAL?char.color:'rgba(255,255,255,.1)',
+              border:`2px solid ${pPos[3]>=TOTAL?char.color:'rgba(255,255,255,.2)'}`,
+              boxShadow:pPos[3]>=TOTAL?`0 0 8px ${char.color}`:'none',transition:'all .4s'}}/>
           </div>
-          <button onClick={rollDice}
-            disabled={phase!=='player'||rolling||!!gameOver}
-            style={{width:'100%',padding:'5px 2px',borderRadius:6,
-              background:phase==='player'&&!gameOver
-                ?`linear-gradient(135deg,${char.color}cc,${char.color}88)`
-                :'rgba(255,255,255,.06)',
-              border:`2px solid ${phase==='player'&&!gameOver?char.color:'rgba(255,255,255,.1)'}`,
-              color:phase==='player'&&!gameOver?'#fff':'rgba(255,255,255,.25)',
-              fontFamily:'Bangers',fontSize:10,letterSpacing:1,cursor:'pointer',
-              boxShadow:phase==='player'&&!gameOver?`0 0 10px ${char.color}88`:'none',
-              animation:phase==='player'&&!rolling&&!gameOver?'charPulse 1.8s ease infinite':'none',
-              transition:'all .2s'}}>
-            {rolling?'...':phase==='player'?skipMeRef.current?'🛑 SKIP':'🎲 TIRAR':'ESPERA'}
-          </button>
-          <p style={{fontFamily:'Bangers',fontSize:7,color:'rgba(255,255,255,.2)',
+          <p style={{fontFamily:'Bangers',fontSize:26,color:'#fff',lineHeight:1,margin:'2px 0',
+            textShadow:`0 0 16px ${char.color}`}}>
+            {pPos.filter(p=>p>=TOTAL).length}
+            <span style={{fontSize:12,color:`${char.color}88`}}>/{WIN_NEED}</span>
+          </p>
+          <div style={{background:`linear-gradient(145deg,${char.color},${char.color}99)`,
+            borderRadius:12,padding:4,
+            boxShadow:`0 4px 16px ${char.color}88,0 0 0 2px ${char.color}`,
+            animation:rolling?'charPulse .4s ease infinite':'none'}}>
+            <Dice3D val={diceVal} rolling={rolling} color={char.color} size={54}/>
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:10,letterSpacing:2,margin:0,
+            color:isMyTurnNow?char.color:'rgba(255,255,255,.2)',
+            textShadow:isMyTurnNow?`0 0 8px ${char.color}`:'none'}}>
+            {isMyTurnNow?'TIRA':'ESPERA'}
+          </p>
+          <p style={{fontFamily:'Bangers',fontSize:7,color:'rgba(255,255,255,.15)',
             letterSpacing:.5,margin:0,textAlign:'center'}}>SALA {code}</p>
         </div>
 
-        {/* CENTER TRACK — identical to RaceMode */}
+        {/* CENTER TRACK */}
         <div style={{flex:1,position:'relative',overflow:'hidden',
           background:'#e8dfc4',boxShadow:'inset 0 0 30px rgba(0,0,0,.15)'}}>
 
@@ -2943,9 +2944,9 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
               width:1.5,background:'rgba(100,70,20,.3)',zIndex:2}}/>
           ))}
 
-          {/* FINISH ZONE */}
-          <div style={{position:'absolute',top:0,left:0,right:0,height:'13%',zIndex:3,overflow:'hidden',
-            borderBottom:'3px solid #c04000'}}>
+          {/* FINISH / HOOP */}
+          <div style={{position:'absolute',top:0,left:0,right:0,height:'13%',zIndex:3,
+            overflow:'hidden',borderBottom:'3px solid #c04000'}}>
             <img src="./aro_fondo.png" alt=""
               style={{position:'absolute',inset:0,width:'100%',height:'100%',
                 objectFit:'cover',objectPosition:'center 28%',
@@ -2974,17 +2975,25 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             )}
           </div>
 
+          {/* TROPHY ICONS */}
+          {[0,1,2,3].map(lane=>(
+            <div key={lane} style={{position:'absolute',left:`${lane*25}%`,width:'25%',
+              top:'13%',height:'5%',display:'flex',justifyContent:'center',alignItems:'center',
+              zIndex:4,fontSize:14,pointerEvents:'none'}}>🏆</div>
+          ))}
+
+          {/* GRID LINES */}
           {Array.from({length:TC+1},(_,i)=>(
             <div key={i} style={{position:'absolute',left:0,right:0,
               top:`${13+i*CELL}%`,height:1,background:'rgba(100,70,15,.18)',zIndex:1}}/>
           ))}
 
+          {/* SPECIALS BANDS */}
           {Object.entries(SPECIALS).map(([posStr,sp])=>{
             const pos=parseInt(posStr);
             const topPct=13+(TC-pos)*CELL+CELL*0.1;
             return(
-              <div key={pos} style={{
-                position:'absolute',left:0,right:0,
+              <div key={pos} style={{position:'absolute',left:0,right:0,
                 top:`${topPct}%`,height:`${CELL*0.8}%`,
                 background:`${sp.color}30`,borderTop:`2px solid ${sp.color}66`,
                 display:'flex',alignItems:'center',justifyContent:'center',gap:4,
@@ -2996,49 +3005,49 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             );
           })}
 
+          {/* STARTING ZONE */}
+          <div style={{position:'absolute',bottom:0,left:0,right:0,height:'12%',
+            background:'linear-gradient(180deg,#2d5a2d,#3a7a3a)',
+            borderTop:'2px solid #4a8a4a',zIndex:3,
+            boxShadow:'inset 0 2px 8px rgba(0,0,0,.3)'}}/>
+
           {/* PIECES */}
           {[0,1,2,3].map(lane=>(
             <React.Fragment key={lane}>
-              {/* OPPONENT piece */}
               {aPos[lane]<TOTAL&&(
-                <div style={{
-                  position:'absolute',
+                <div style={{position:'absolute',
                   left:aPos[lane]===0?`${lane*25+18}%`:`${lane*25+12.5}%`,
-                  top:aPos[lane]===0?'94%':`${posY(aPos[lane])}%`,
+                  top:aPos[lane]===0?'92%':`${posY(aPos[lane])}%`,
                   transform:'translate(-50%,-50%)',
-                  transition:'top 0.14s cubic-bezier(.4,0,.2,1), left .18s ease',
-                  zIndex:5}}>
+                  transition:'top 0.14s cubic-bezier(.4,0,.2,1),left .18s ease',zIndex:5}}>
                   <div style={{position:'absolute',bottom:-4,left:'50%',transform:'translateX(-50%)',
                     width:26,height:6,borderRadius:'50%',background:'rgba(0,0,0,.3)',filter:'blur(3px)'}}/>
                   <div style={{width:32,height:32,borderRadius:'50%',overflow:'hidden',
-                    border:`3px solid ${aiChar.color}`,
-                    boxShadow:`0 0 12px ${aiChar.color}aa`,
+                    border:`3px solid ${aiChar.color}`,boxShadow:`0 0 12px ${aiChar.color}aa`,
                     background:`radial-gradient(circle at 35% 35%,${aiChar.color}ff,${aiChar.color}88)`}}>
                     <CharFace charId={aiChar.id} size={32}/>
                   </div>
                   <div style={{position:'absolute',bottom:-9,left:'50%',transform:'translateX(-50%)',
                     fontFamily:'Bangers',fontSize:6,color:'#fff',letterSpacing:.5,
-                    background:`${aiChar.color}cc`,padding:'0 3px',borderRadius:2,whiteSpace:'nowrap'}}>RIV</div>
+                    background:`${aiChar.color}cc`,padding:'0 3px',borderRadius:2,whiteSpace:'nowrap'}}>
+                    {oppAlias.slice(0,5)}
+                  </div>
                   {floats[`a${lane}`]&&(
-                    <div key={floats[`a${lane}`].ts} style={{
-                      position:'absolute',top:'-22px',left:'50%',transform:'translateX(-50%)',
-                      fontFamily:'Bangers',fontSize:13,color:'#ef4444',whiteSpace:'nowrap',
-                      animation:'floatPoints .9s ease forwards'}}>
+                    <div key={floats[`a${lane}`].ts} style={{position:'absolute',top:'-22px',
+                      left:'50%',transform:'translateX(-50%)',fontFamily:'Bangers',fontSize:13,
+                      color:'#ef4444',whiteSpace:'nowrap',animation:'floatPoints .9s ease forwards'}}>
                       {floats[`a${lane}`].val}
                     </div>
                   )}
                 </div>
               )}
-              {/* MY piece */}
               {pPos[lane]<TOTAL&&(
-                <div onClick={()=>onSelectLane(lane)} style={{
-                  position:'absolute',
+                <div onClick={()=>onSelectLane(lane)} style={{position:'absolute',
                   left:pPos[lane]===0?`${lane*25+7}%`:`${lane*25+12.5}%`,
-                  top:pPos[lane]===0?'94%':`${posY(pPos[lane])}%`,
+                  top:pPos[lane]===0?'92%':`${posY(pPos[lane])}%`,
                   transform:'translate(-50%,-50%)',
-                  transition:'top 0.14s cubic-bezier(.4,0,.2,1), left .18s ease',
-                  zIndex:6,
-                  cursor:selectLanes.includes(lane)?'pointer':'default'}}>
+                  transition:'top 0.14s cubic-bezier(.4,0,.2,1),left .18s ease',
+                  zIndex:6,cursor:selectLanes.includes(lane)?'pointer':'default'}}>
                   {selectLanes.includes(lane)&&(
                     <div style={{position:'absolute',inset:-9,borderRadius:'50%',
                       background:`${char.color}22`,border:`2.5px solid ${char.color}`,
@@ -3046,8 +3055,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
                   )}
                   <div style={{position:'absolute',bottom:-4,left:'50%',transform:'translateX(-50%)',
                     width:28,height:6,borderRadius:'50%',background:'rgba(0,0,0,.32)',filter:'blur(3px)'}}/>
-                  <div style={{
-                    width:34,height:34,borderRadius:'50%',overflow:'hidden',
+                  <div style={{width:34,height:34,borderRadius:'50%',overflow:'hidden',
                     border:`3px solid ${char.color}`,
                     boxShadow:selectLanes.includes(lane)
                       ?`0 0 22px ${char.color},0 0 40px ${char.color}66`
@@ -3056,10 +3064,10 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
                     <CharFace charId={char.id} size={34}/>
                   </div>
                   {floats[`p${lane}`]&&(
-                    <div key={floats[`p${lane}`].ts} style={{
-                      position:'absolute',top:'-22px',left:'50%',transform:'translateX(-50%)',
-                      fontFamily:'Bangers',fontSize:13,color:'#22c55e',whiteSpace:'nowrap',
-                      animation:'floatPoints .9s ease forwards',textShadow:'0 0 8px #22c55e'}}>
+                    <div key={floats[`p${lane}`].ts} style={{position:'absolute',top:'-22px',
+                      left:'50%',transform:'translateX(-50%)',fontFamily:'Bangers',fontSize:13,
+                      color:'#22c55e',whiteSpace:'nowrap',animation:'floatPoints .9s ease forwards',
+                      textShadow:'0 0 8px #22c55e'}}>
                       {floats[`p${lane}`].val}
                     </div>
                   )}
@@ -3068,91 +3076,132 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
               {pPos[lane]>=TOTAL&&(
                 <div style={{position:'absolute',left:`${lane*25+6}%`,top:'7%',
                   transform:'translate(-50%,-50%)',zIndex:7}}>
-                  <div style={{width:24,height:24,borderRadius:'50%',
-                    background:char.color,border:'2.5px solid #fff',
-                    display:'flex',alignItems:'center',justifyContent:'center',
+                  <div style={{width:24,height:24,borderRadius:'50%',background:char.color,
+                    border:'2.5px solid #fff',display:'flex',alignItems:'center',justifyContent:'center',
                     fontSize:11,boxShadow:`0 0 12px ${char.color}`}}>✓</div>
                 </div>
               )}
               {aPos[lane]>=TOTAL&&(
                 <div style={{position:'absolute',left:`${lane*25+19}%`,top:'7%',
                   transform:'translate(-50%,-50%)',zIndex:6}}>
-                  <div style={{width:24,height:24,borderRadius:'50%',
-                    background:aiChar.color,border:'2.5px solid #fff',
-                    display:'flex',alignItems:'center',justifyContent:'center',
+                  <div style={{width:24,height:24,borderRadius:'50%',background:aiChar.color,
+                    border:'2.5px solid #fff',display:'flex',alignItems:'center',justifyContent:'center',
                     fontSize:11,boxShadow:`0 0 12px ${aiChar.color}`}}>✓</div>
                 </div>
               )}
               {captureFlash===lane&&(
-                <div style={{position:'absolute',left:`${lane*25}%`,width:'25%',
-                  top:0,bottom:0,background:'rgba(255,220,0,.45)',
-                  animation:'captureFlash .4s ease',pointerEvents:'none',zIndex:8}}/>
+                <div style={{position:'absolute',left:`${lane*25}%`,width:'25%',top:0,bottom:0,
+                  background:'rgba(255,220,0,.45)',animation:'captureFlash .4s ease',
+                  pointerEvents:'none',zIndex:8}}/>
               )}
             </React.Fragment>
           ))}
         </div>
 
-        {/* RIGHT — OPPONENT CARD */}
-        <div style={{width:76,flexShrink:0,
-          background:'linear-gradient(180deg,#0d1c3a,#0a1628)',
+        {/* RIGHT — RIVAL CARTA */}
+        <div style={{width:82,flexShrink:0,
+          background:'linear-gradient(180deg,#0d1c3a 0%,#091525 100%)',
           borderLeft:`2px solid ${aiChar.color}44`,
           display:'flex',flexDirection:'column',alignItems:'center',
-          padding:'8px 4px',gap:4,
+          padding:'6px 4px',gap:3,
           boxShadow:`inset 6px 0 18px ${aiChar.color}18`}}>
-          <div style={{position:'relative'}}>
-            <div style={{width:46,height:46,borderRadius:'50%',overflow:'hidden',
-              border:`2px solid ${aiChar.color}`,
-              boxShadow:`0 0 14px ${aiChar.color}aa`,
-              animation:aiRolling?'charPulse 1.8s ease infinite':'none'}}>
-              <CharFace charId={aiChar.id} size={46}/>
-            </div>
-            {aiRolling&&(
-              <div style={{position:'absolute',top:1,right:1,width:10,height:10,borderRadius:'50%',
-                background:'#f59e0b',border:'2px solid #0a1628',boxShadow:'0 0 6px #f59e0b'}}/>
-            )}
+          <div style={{width:52,height:52,borderRadius:'50%',overflow:'hidden',
+            border:`2px solid ${aiChar.color}`,
+            boxShadow:`0 0 16px ${aiChar.color}aa`,
+            animation:aiRolling?'charPulse 1.8s ease infinite':'none'}}>
+            <CharFace charId={aiChar.id} size={52}/>
           </div>
           <p style={{fontFamily:'Bangers',fontSize:11,color:aiChar.color,letterSpacing:1,
             textAlign:'center',lineHeight:1,margin:0,textShadow:`0 0 10px ${aiChar.color}88`}}>
             {aiChar.name}
           </p>
-          <p style={{fontFamily:'Bangers',fontSize:9,color:'rgba(255,255,255,.4)',
-            letterSpacing:.5,margin:0,textAlign:'center'}}>{oppAlias}</p>
-          <div style={{display:'flex',gap:3,flexWrap:'wrap',justifyContent:'center',maxWidth:64}}>
-            {[0,1,2,3].map(i=>(
-              <div key={i} style={{
-                width:14,height:14,borderRadius:'50%',
-                background:aPos[i]>=TOTAL?'transparent':'rgba(255,255,255,.1)',
-                border:`2px solid ${aPos[i]>=TOTAL?aiChar.color:'rgba(255,255,255,.15)'}`,
-                boxShadow:aPos[i]>=TOTAL?`0 0 8px ${aiChar.color}`:'none',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:aPos[i]>=TOTAL?10:0,transition:'all .4s'}}>
-                {aPos[i]>=TOTAL?'🏀':''}
-              </div>
+          <p style={{fontFamily:'Bangers',fontSize:8,color:'rgba(255,255,255,.35)',
+            letterSpacing:.5,margin:0}}>SHOHOKU</p>
+          <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{width:13,height:13,borderRadius:'50%',
+                background:aPos[i]>=TOTAL?aiChar.color:'rgba(255,255,255,.1)',
+                border:`2px solid ${aPos[i]>=TOTAL?aiChar.color:'rgba(255,255,255,.2)'}`,
+                boxShadow:aPos[i]>=TOTAL?`0 0 8px ${aiChar.color}`:'none',transition:'all .4s'}}/>
             ))}
           </div>
-          <p style={{fontFamily:'Bangers',fontSize:22,color:'#fff',lineHeight:1,margin:0,
-            textShadow:`0 0 12px ${aiChar.color}`}}>
-            {aPos.filter(p=>p>=TOTAL).length}
-            <span style={{fontSize:11,color:`${aiChar.color}88`}}>/{WIN_NEED}</span>
-          </p>
-          <div style={{background:`linear-gradient(145deg,${aiChar.color}cc,${aiChar.color}88)`,
-            borderRadius:10,padding:3,boxShadow:`0 3px 12px ${aiChar.color}66`,
-            border:`2px solid ${aiChar.color}`}}>
-            <Dice3D val={aiDiceVal} rolling={aiRolling} color={aiChar.color} size={42}/>
+          <div style={{display:'flex',justifyContent:'center'}}>
+            <div style={{width:13,height:13,borderRadius:'50%',
+              background:aPos[3]>=TOTAL?aiChar.color:'rgba(255,255,255,.1)',
+              border:`2px solid ${aPos[3]>=TOTAL?aiChar.color:'rgba(255,255,255,.2)'}`,
+              boxShadow:aPos[3]>=TOTAL?`0 0 8px ${aiChar.color}`:'none',transition:'all .4s'}}/>
           </div>
-          <p style={{fontFamily:'Bangers',fontSize:10,letterSpacing:1,
-            color:aiRolling?aiChar.color:'rgba(255,255,255,.3)',
-            textShadow:aiRolling?`0 0 8px ${aiChar.color}`:'none',margin:0}}>
-            {aiRolling?'...':''}
+          <p style={{fontFamily:'Bangers',fontSize:26,color:'#fff',lineHeight:1,margin:'2px 0',
+            textShadow:`0 0 16px ${aiChar.color}`}}>
+            {aPos.filter(p=>p>=TOTAL).length}
+            <span style={{fontSize:12,color:`${aiChar.color}88`}}>/{WIN_NEED}</span>
+          </p>
+          <div style={{background:`linear-gradient(145deg,${aiChar.color},${aiChar.color}99)`,
+            borderRadius:12,padding:4,
+            boxShadow:`0 4px 16px ${aiChar.color}88,0 0 0 2px ${aiChar.color}`,
+            animation:aiRolling?'charPulse .4s ease infinite':'none'}}>
+            <Dice3D val={aiDiceVal} rolling={aiRolling} color={aiChar.color} size={54}/>
+          </div>
+          <p style={{fontFamily:'Bangers',fontSize:10,letterSpacing:2,margin:0,
+            color:aiRolling?aiChar.color:'rgba(255,255,255,.2)',
+            textShadow:aiRolling?`0 0 8px ${aiChar.color}`:'none'}}>
+            {aiRolling?'TIRANDO':oppAlias.slice(0,6).toUpperCase()}
           </p>
         </div>
       </div>
 
-      {/* CELEB OVERLAY */}
+      {/* TIRAR DADO BUTTON */}
+      <div style={{width:'100%',maxWidth:480,flexShrink:0,
+        background:'rgba(0,0,0,.45)',padding:'6px 10px 5px',
+        display:'flex',gap:8,alignItems:'center'}}>
+        <div style={{background:'rgba(0,0,0,.55)',borderRadius:8,padding:'5px 7px',
+          display:'flex',flexDirection:'column',alignItems:'center',minWidth:44,flexShrink:0}}>
+          <span style={{fontSize:14}}>⚡</span>
+          <span style={{fontFamily:'Bangers',fontSize:7,color:'rgba(255,255,255,.3)',letterSpacing:.5}}>SALA</span>
+          <span style={{fontFamily:'Bangers',fontSize:9,color:'rgba(255,255,255,.5)',letterSpacing:1}}>{code}</span>
+        </div>
+        <button onClick={rollDice} disabled={!canRoll&&phase!=='select'}
+          style={{flex:1,padding:'13px',fontSize:17,borderRadius:12,
+            cursor:(canRoll||phase==='select')?'pointer':'not-allowed',
+            background:(canRoll||phase==='select')
+              ?'linear-gradient(135deg,#c8001a,#e8242b)'
+              :'rgba(255,255,255,.06)',
+            border:`2px solid ${(canRoll||phase==='select')?'#ff4444':'rgba(255,255,255,.1)'}`,
+            color:(canRoll||phase==='select')?'#fff':'rgba(255,255,255,.2)',
+            fontFamily:'Bangers',letterSpacing:3,
+            boxShadow:(canRoll||phase==='select')
+              ?'0 4px 20px rgba(200,0,26,.5),0 0 0 1px rgba(255,100,100,.3)':'none',
+            animation:canRoll&&!rolling?'charPulse 1.8s ease infinite':'none',
+            transition:'all .2s'}}>
+          {rolling?'...'
+            :phase==='select'?'🎯 ELIGE JUGADOR'
+            :canRoll?(skipMeRef.current?'🛑 PASAR TURNO':'🎲 TIRAR DADO')
+            :'⏳ ESPERANDO...'}
+        </button>
+      </div>
+
+      {/* SPECIALS LEGEND */}
+      <div style={{width:'100%',maxWidth:480,flexShrink:0,
+        background:'rgba(0,0,0,.6)',padding:'4px 6px',
+        display:'flex',justifyContent:'space-around',alignItems:'center'}}>
+        {[
+          {emoji:'⚡',text:'+2 PASOS',color:'#22c55e'},
+          {emoji:'🤚',text:'-2 PASOS',color:'#ef4444'},
+          {emoji:'🏀',text:'+4 PASOS',color:'#f59e0b'},
+          {emoji:'🛑',text:'PIERDE TURNO',color:'#7c3aed'},
+          {emoji:'3️⃣',text:'+3 PASOS',color:'#06b6d4'},
+        ].map((s,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',gap:2}}>
+            <span style={{fontSize:9}}>{s.emoji}</span>
+            <span style={{fontFamily:'Bangers',fontSize:8,color:s.color,letterSpacing:.3}}>{s.text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* CELEB */}
       {celebAnim&&(
         <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:90,
-          display:'flex',alignItems:'center',justifyContent:'center',
-          background:celebAnim.bg}}>
+          display:'flex',alignItems:'center',justifyContent:'center',background:celebAnim.bg}}>
           <div style={{fontFamily:'Bangers',fontSize:42,color:celebAnim.color,letterSpacing:4,
             textShadow:`0 0 30px ${celebAnim.color}`,
             animation:'zoomIn .4s cubic-bezier(.175,.885,.32,1.275)'}}>
@@ -3161,7 +3210,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
         </div>
       )}
 
-      {/* SPECIAL POPUP */}
+      {/* POPUP ESPECIAL */}
       {popup&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.75)',zIndex:300,
           display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -3169,8 +3218,8 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             borderRadius:20,padding:'24px 36px',textAlign:'center',
             boxShadow:`0 0 50px ${popup.color}88`,animation:'zoomIn .3s ease'}}>
             <p style={{fontSize:44,margin:0}}>{popup.emoji}</p>
-            <p style={{fontFamily:'Bangers',fontSize:26,color:popup.color,
-              letterSpacing:3,margin:'4px 0 0',textShadow:`0 0 16px ${popup.color}`}}>{popup.label}</p>
+            <p style={{fontFamily:'Bangers',fontSize:26,color:popup.color,letterSpacing:3,
+              margin:'4px 0 0',textShadow:`0 0 16px ${popup.color}`}}>{popup.label}</p>
             <p style={{fontFamily:'Bangers',fontSize:15,color:'#fff',margin:'2px 0 0'}}>{popup.text}</p>
           </div>
         </div>
@@ -3192,7 +3241,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
           </div>
           <p style={{fontFamily:'Bangers',fontSize:54,letterSpacing:3,textAlign:'center',
             color:gameOver==='player'?'#22c55e':'#e8242b',
-            textShadow:`0 0 40px ${gameOver==='player'?'#22c55e':'#e8242b'}, 3px 3px 0 #000`,
+            textShadow:`0 0 40px ${gameOver==='player'?'#22c55e':'#e8242b'},3px 3px 0 #000`,
             animation:'zoomIn .5s ease',position:'relative',margin:0}}>
             {gameOver==='player'?'¡GANASTE!':'PERDISTE'}
           </p>
