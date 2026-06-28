@@ -3165,18 +3165,19 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
             cursor:(canRoll||phase==='select')?'pointer':'not-allowed',
             background:(canRoll||phase==='select')
               ?'linear-gradient(135deg,#c8001a,#e8242b)'
-              :'rgba(255,255,255,.06)',
-            border:`2px solid ${(canRoll||phase==='select')?'#ff4444':'rgba(255,255,255,.1)'}`,
-            color:(canRoll||phase==='select')?'#fff':'rgba(255,255,255,.2)',
+              :'linear-gradient(135deg,#0a1f3a,#0d2a50)',
+            border:`2px solid ${(canRoll||phase==='select')?'#ff4444':'rgba(96,165,250,.5)'}`,
+            color:'#fff',
             fontFamily:'Bangers',letterSpacing:3,
             boxShadow:(canRoll||phase==='select')
-              ?'0 4px 20px rgba(200,0,26,.5),0 0 0 1px rgba(255,100,100,.3)':'none',
+              ?'0 4px 20px rgba(200,0,26,.5),0 0 0 1px rgba(255,100,100,.3)'
+              :'0 4px 16px rgba(29,78,216,.4),0 0 0 1px rgba(96,165,250,.2)',
             animation:canRoll&&!rolling?'charPulse 1.8s ease infinite':'none',
             transition:'all .2s'}}>
           {rolling?'...'
             :phase==='select'?'🎯 ELIGE JUGADOR'
             :canRoll?(skipMeRef.current?'🛑 PASAR TURNO':'🎲 TIRAR DADO')
-            :'⏳ ESPERANDO...'}
+            :`⚡ ${oppAlias.toUpperCase()} LANZANDO...`}
         </button>
       </div>
 
