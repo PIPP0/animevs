@@ -3140,7 +3140,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
           <p style={{fontFamily:'Bangers',fontSize:10,letterSpacing:2,margin:0,
             color:aiRolling?aiChar.color:'rgba(255,255,255,.2)',
             textShadow:aiRolling?`0 0 8px ${aiChar.color}`:'none'}}>
-            {aiRolling?'TIRANDO':oppAlias.slice(0,6).toUpperCase()}
+            {aiRolling?'TIRANDO':oppAlias.slice(0,8).toUpperCase()}
           </p>
         </div>
       </div>
@@ -3172,7 +3172,7 @@ function MultiplayerRace({ code, role, myChar, oppChar, myAlias, oppAlias, onBac
           {rolling?'...'
             :phase==='select'?'🎯 ELIGE JUGADOR'
             :canRoll?(skipMeRef.current?'🛑 PASAR TURNO':'🎲 TIRAR DADO')
-            :`⚡ ${oppAlias.toUpperCase()} LANZANDO...`}
+            :`⚡ ${aiChar.name.toUpperCase()} LANZANDO...`}
         </button>
       </div>
 
