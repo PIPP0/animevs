@@ -77,6 +77,19 @@
       return true;
     } catch(e) { console.warn('Feedback error:', e); return false; }
   };
+
+  // Auto-sync al cargar el módulo: fix para jugadores que cambiaron nombre
+  // desde "Jugador" antes de que este módulo estuviera listo (race condition)
+  try {
+    const _alias = localStorage.getItem('animevs_alias');
+    if (_alias && _alias !== 'Jugador') {
+      const _w   = parseInt(localStorage.getItem('animevs_wins')  || '0');
+      const _l   = parseInt(localStorage.getItem('animevs_losses')|| '0');
+      const _rp  = parseInt(localStorage.getItem('animevs_rp')    || '0');
+      const _fav = localStorage.getItem('animevs_fav_char') || 'sakuragi';
+      window.savePlayerToFirebase(_alias, _w, _l, _rp, _fav);
+    }
+  } catch(_e) {}
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700;800&display=swap');
@@ -1951,13 +1964,16 @@ function RankingScreen({ onBack, playerAlias }) {
   useEffect(() => {
     const load = async () => {
       // Sincronizar stats del jugador actual antes de cargar el ranking
-      const alias = playerAlias;
+      const alias = localStorage.getItem('animevs_alias') || '';
+      console.log('[RANKING SYNC] alias:', alias, '| fn:', !!window.savePlayerToFirebase);
       if (alias && alias !== 'Jugador' && window.savePlayerToFirebase) {
         const w   = parseInt(localStorage.getItem('animevs_wins')||'0');
         const l   = parseInt(localStorage.getItem('animevs_losses')||'0');
         const rp  = parseInt(localStorage.getItem('animevs_rp')||'0');
         const fav = localStorage.getItem('animevs_fav_char')||'sakuragi';
+        console.log('[RANKING SYNC] guardando:', alias, w, l, rp, fav);
         await window.savePlayerToFirebase(alias, w, l, rp, fav);
+        console.log('[RANKING SYNC] guardado OK');
       }
       if (window.getGlobalRanking) {
         const data = await window.getGlobalRanking();
