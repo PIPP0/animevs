@@ -1950,6 +1950,15 @@ function RankingScreen({ onBack, playerAlias }) {
 
   useEffect(() => {
     const load = async () => {
+      // Sincronizar stats del jugador actual antes de cargar el ranking
+      const alias = playerAlias;
+      if (alias && alias !== 'Jugador' && window.savePlayerToFirebase) {
+        const w   = parseInt(localStorage.getItem('animevs_wins')||'0');
+        const l   = parseInt(localStorage.getItem('animevs_losses')||'0');
+        const rp  = parseInt(localStorage.getItem('animevs_rp')||'0');
+        const fav = localStorage.getItem('animevs_fav_char')||'sakuragi';
+        await window.savePlayerToFirebase(alias, w, l, rp, fav);
+      }
       if (window.getGlobalRanking) {
         const data = await window.getGlobalRanking();
         setGlobalRanking(data);
@@ -2302,10 +2311,35 @@ function App() {
   const [changingAlias, setChangingAlias] = useState(false);
   const [showTierModal, setShowTierModal] = useState(false);
 
+  // Sincronizar con Firebase al cargar la app si hay alias válido
+  useEffect(() => {
+    const alias = localStorage.getItem('animevs_alias');
+    if (!alias || alias === 'Jugador') return;
+    const sync = () => {
+      if (!window.savePlayerToFirebase) return;
+      const w   = parseInt(localStorage.getItem('animevs_wins')||'0');
+      const l   = parseInt(localStorage.getItem('animevs_losses')||'0');
+      const rp  = parseInt(localStorage.getItem('animevs_rp')||'0');
+      const fav = localStorage.getItem('animevs_fav_char')||'sakuragi';
+      window.savePlayerToFirebase(alias, w, l, rp, fav);
+    };
+    // Pequeño delay para que el módulo Firebase termine de cargar
+    const t = setTimeout(sync, 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   const saveAlias = (name) => {
     localStorage.setItem('animevs_alias', name);
     setPlayerAlias(name);
     setChangingAlias(false);
+    // Sincronizar stats actuales con Firebase bajo el nuevo nombre
+    if (window.savePlayerToFirebase) {
+      const w = parseInt(localStorage.getItem('animevs_wins')||'0');
+      const l = parseInt(localStorage.getItem('animevs_losses')||'0');
+      const rp = parseInt(localStorage.getItem('animevs_rp')||'0');
+      const fav = localStorage.getItem('animevs_fav_char')||'sakuragi';
+      window.savePlayerToFirebase(name, w, l, rp, fav);
+    }
   };
 
   const getPlayerTier = () => {
